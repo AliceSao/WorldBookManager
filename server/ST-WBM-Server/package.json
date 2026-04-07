@@ -1,0 +1,21 @@
+{
+  "name": "st-wbm-server",
+  "version": "1.0.0",
+  "description": "ST-WBM-Server v1.0 — SillyTavern 世界书管理器后端插件",
+  "type": "module",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch"
+  },
+  "author": "AliceSao",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.25",
+    "@types/node": "^20.19.39",
+    "typescript": "^5.9.3"
+  }
+}

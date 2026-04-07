@@ -1,0 +1,64 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+*.egg
+.installed.cfg
+
+# 虚拟环境
+venv/
+ENV/
+env/
+.venv/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# 操作系统
+.DS_Store
+Thumbs.db
+
+# 日志
+*.log
+
+# 临时文件
+*.tmp
+*.backup
+
+# npm
+ST-WBM-UI/node_modules/
+server/ST-WBM-Server/node_modules/
+
+# 世界书数据
+src/JSON/
+src/TXT/
+
+# 构建相关
+build/
+*.spec
+build.bat
+build.sh
+
+# dist目录（仅放行wbm.exe）
+dist/*
+!dist/wbm.exe
+
+# 打包缓存
+*.toc
+*.zip
+*.pkg
+*.html
+warn-*.txt
+base_library.zip
+
+# 本地文档（不推送）
+ReadMe_WB_Manager.md
+
+# 配置
+config/

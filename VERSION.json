@@ -1,0 +1,73 @@
+{
+  "version": "1.0.1",
+  "release_date": "2026-04-04",
+  "name": "WorldBook Manager",
+  "description": "SillyTavern 世界书管理工具",
+  "author": "WorldBook Manager Contributors",
+  "license": "MIT",
+  "python_version": ">=3.7",
+  "features": {
+    "basic": [
+      "split - 拆分 JSON 世界书为 TXT 文件",
+      "merge - 合并 TXT 文件为 JSON 世界书",
+      "create - 创建 TXT 模板",
+      "list - 列出 TXT 文件"
+    ],
+    "batch": [
+      "batch-set-uid - 批量设置 UID",
+      "batch-set-newname - 批量设置 WorldBook_NewName",
+      "batch-set-order - 批量设置 Order",
+      "batch-set-position - 批量设置 Position",
+      "batch-set-strategy - 批量设置 Strategy",
+      "batch-set-recursion - 批量设置 Recursion",
+      "batch-set-effect - 批量设置 Effect",
+      "batch-update-field - 批量更新字段值",
+      "batch-move - 批量移动 TXT 文件"
+    ],
+    "advanced": [
+      "add-keywords - 为指定 UID 添加关键字",
+      "batch-add-keywords - 批量为多个 UID 添加关键字",
+      "remove-keywords - 从指定 UID 删除关键字",
+      "clear-keywords - 清空指定 UID 的所有关键字",
+      "batch-clear-keywords - 批量清空多个 TXT 文件的所有关键字",
+      "extract-by-key - 根据 Key 字段提取 TXT 文件",
+      "extract-constant - 提取常量（蓝灯）条目",
+      "remove - 删除 TXT 子目录或文件"
+    ]
+  },
+  "changes": {
+    "1.0.1": [
+      "添加 batch-add-keywords 命令",
+      "为所有命令添加短参数支持",
+      "修复 UID 范围筛选问题",
+      "添加 get_uid_from_content 方法",
+      "全面测试所有功能"
+    ],
+    "1.0.0": [
+      "初始版本发布",
+      "实现所有核心功能",
+      "实现所有批量操作",
+      "实现所有高级功能"
+    ]
+  },
+  "directories": {
+    "config": "config/",
+    "json_old": "JSON/old/",
+    "json_new": "JSON/new/",
+    "json_bak": "JSON/bak/",
+    "txt": "TXT/",
+    "txt_tmp": "TXT/TMP/",
+    "txt_constant": "TXT/constant/",
+    "doc": "doc/"
+  },
+  "files": {
+    "main": "main.py",
+    "commands": "commands.py",
+    "config_manager": "config_manager.py",
+    "json_parser": "json_parser.py",
+    "json_generator": "json_generator.py",
+    "txt_parser": "txt_parser.py",
+    "txt_generator": "txt_generator.py",
+    "utils": "utils.py"
+  }
+}

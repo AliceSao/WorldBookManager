@@ -1,0 +1,13 @@
+{
+  "display_name": "世界书管理器 (WorldBook Manager)",
+  "loading_order": 80,
+  "requires": [],
+  "optional": ["JS-Slash-Runner"],
+  "js": "index.js",
+  "css": "style.css",
+  "author": "AliceSao",
+  "version": "1.0.0",
+  "description": "双面板世界书编辑器，支持23条斜杠命令、批量操作、搜索、主题切换，需配合 ST-WBM-Server 后端插件使用。",
+  "homePage": "https://github.com/AliceSao/WorldBookManager",
+  "auto_update": true
+}

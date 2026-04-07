@@ -1,0 +1,1434 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+"""
+WorldBook Manager - 主程序入口
+
+用于管理SillyTavern世界书的拆分、编辑和重组
+"""
+
+import sys
+import argparse
+import glob
+import shutil
+from pathlib import Path
+from typing import List, Optional
+
+from config_manager import ConfigManager
+from json_parser import JSONParser
+from txt_generator import TXTGenerator
+from txt_parser import TXTParser
+from json_generator import JSONGenerator
+from utils import (
+    ensure_directory_exists,
+    format_file_size,
+    get_file_size,
+    load_text_file,
+    save_text_file
+)
+from commands import setup_parser
+
+
+class WorldBookManager:
+    """世界书管理器"""
+    
+    def __init__(self):
+        """初始化世界书管理器"""
+        self.config = ConfigManager()
+        self.json_parser = JSONParser(self.config)
+        self.txt_generator = TXTGenerator(self.config)
+        self.txt_parser = TXTParser(self.config)
+        self.json_generator = JSONGenerator(self.config)
+    
+    def split_worldbook(self, json_file: str, output_dir: str = None) -> None:
+        """
+        拆分JSON世界书为TXT文件
+        
+        Args:
+            json_file: JSON文件路径
+            output_dir: 输出目录（如果指定，则在该目录下创建以世界书名称命名的子目录）
+        """
+        print(f"正在拆分世界书: {json_file}")
+        
+        json_path = Path(json_file)
+        if not json_path.exists():
+            print(f"错误: 文件不存在 - {json_file}")
+            return
+        
+        # 获取世界书名称
+        worldbook_name = self.json_parser.get_worldbook_name_from_file(json_file)
+        
+        # 如果指定了输出目录，则在该目录下创建以世界书名称命名的子目录
+        if output_dir is None:
+            base_dir = self.config.get_directory('txt')
+            output_dir = base_dir / worldbook_name
+        else:
+            base_dir = Path(output_dir)
+            output_dir = base_dir / worldbook_name
+        
+        ensure_directory_exists(output_dir)
+        
+        try:
+            metadata, entries = self.json_parser.parse_worldbook_json(json_file)
+            
+            print(f"找到 {len(entries)} 个条目")
+            
+            generated_files = self.txt_generator.batch_generate_txt(
+                entries, 
+                str(output_dir), 
+                worldbook_name
+            )
+            
+            print(f"成功生成 {len(generated_files)} 个TXT文件")
+            print(f"输出目录: {output_dir}")
+            
+            stats = self.json_parser.get_entry_statistics(entries)
+            print(f"\n统计信息:")
+            print(f"  总条目数: {stats['total']}")
+            print(f"  常量条目: {stats['constant']}")
+            print(f"  可选条目: {stats['selective']}")
+            print(f"  启用条目: {stats['enabled']}")
+            print(f"  禁用条目: {stats['disabled']}")
+            
+        except Exception as e:
+            print(f"拆分失败: {e}")
+            import traceback
+            traceback.print_exc()
+    
+    def merge_worldbook(self, output_name: str, txt_files: List[str], 
+                        output_dir: str = None, user_input_name: str = None,
+                        format: str = 'new') -> None:
+        """
+        合并TXT文件为JSON世界书
+        
+        Args:
+            output_name: 输出世界书名称
+            txt_files: TXT文件列表
+            output_dir: 输出目录
+            user_input_name: 用户输入的世界书名称（用于验证）
+            format: 输出格式（'new'或'old'）
+        """
+        print(f"正在合并世界书: {output_name}")
+        print(f"输入文件数: {len(txt_files)}")
+        print(f"输出格式: {format}")
+        
+        if output_dir is None:
+            output_dir = self.config.get_directory('json_new')
+        else:
+            output_dir = Path(output_dir)
+        
+        ensure_directory_exists(output_dir)
+        
+        try:
+            entries = self.txt_parser.batch_parse_txt(txt_files)
+            
+            print(f"成功解析 {len(entries)} 个条目")
+            
+            if user_input_name:
+                print(f"验证新名称: {user_input_name}")
+            
+            output_file = output_dir / f"{output_name}.json"
+            
+            metadata = {
+                'name': output_name,
+                'description': f'从 {len(txt_files)} 个TXT文件合并',
+            }
+            
+            self.json_generator.generate_worldbook_json(entries, str(output_file), metadata, format)
+            
+            print(f"成功生成JSON文件: {output_file}")
+            
+            stats = self.json_generator.get_entry_statistics(entries)
+            print(f"\n统计信息:")
+            print(f"  总条目数: {stats['total']}")
+            print(f"  常量条目: {stats['constant']}")
+            print(f"  可选条目: {stats['selective']}")
+            print(f"  启用条目: {stats['enabled']}")
+            print(f"  禁用条目: {stats['disabled']}")
+            print(f"  Order范围: {stats['order_range']['min']} - {stats['order_range']['max']}")
+            
+        except Exception as e:
+            print(f"合并失败: {e}")
+            import traceback
+            traceback.print_exc()
+    
+    def create_template(self, template_name: str, output_dir: str = None, uid: int = None, order: int = None) -> None:
+        """
+        创建TXT模板
+        
+        Args:
+            template_name: 模板名称（Comment）
+            output_dir: 输出目录
+            uid: 指定的UID
+            order: 指定的Order
+        """
+        print(f"正在创建TXT模板: {template_name}")
+        
+        if output_dir is None:
+            output_dir = self.config.get_directory('txt') / 'TMP'
+        else:
+            output_dir = Path(output_dir)
+        
+        ensure_directory_exists(output_dir)
+        
+        try:
+            file_path = self.txt_generator.generate_txt_template(
+                str(output_dir), 
+                template_name, 
+                uid,
+                order
+            )
+            
+            print(f"UID: {uid if uid else '自动生成'}")
+            print(f"Order: {order if order else '100（默认）'}")
+            print(f"成功创建TXT模板文件: {file_path}")
+            
+        except Exception as e:
+            print(f"创建TXT模板失败: {e}")
+            import traceback
+            traceback.print_exc()
+    
+    def merge_by_uid_range(self, output_name: str, uid_start: int, uid_end: int, 
+                          txt_dir: str = None, output_dir: str = None,
+                          format: str = 'new') -> None:
+        """
+        按UID范围合并TXT文件为JSON世界书
+        
+        Args:
+            output_name: 输出世界书名称
+            uid_start: 起始UID
+            uid_end: 结束UID
+            txt_dir: TXT目录
+            output_dir: 输出目录
+            format: 输出格式（'new'或'old'）
+        """
+        print(f"正在按UID范围合并世界书: {output_name}")
+        print(f"UID范围: {uid_start} - {uid_end}")
+        print(f"输出格式: {format}")
+        
+        if txt_dir is None:
+            txt_dir = self.config.get_directory('txt')
+        else:
+            txt_dir = Path(txt_dir)
+        
+        if output_dir is None:
+            output_dir = self.config.get_directory('json_new')
+        else:
+            output_dir = Path(output_dir)
+        
+        ensure_directory_exists(output_dir)
+        
+        try:
+            # 获取所有TXT文件
+            txt_files = list(txt_dir.glob('*.txt'))
+            
+            # 筛选指定UID范围的文件
+            selected_files = []
+            for txt_file in txt_files:
+                # 从文件内容中读取UID（而不是从文件名）
+                try:
+                    content = load_text_file(str(txt_file))
+                    uid = self.txt_parser.get_uid_from_content(content)
+                except:
+                    uid = None
+                
+                if uid is not None and uid_start <= uid <= uid_end:
+                    selected_files.append(str(txt_file))
+            
+            print(f"找到 {len(selected_files)} 个匹配的TXT文件")
+            
+            if not selected_files:
+                print("没有找到匹配的TXT文件")
+                return
+            
+            # 解析TXT文件
+            entries = self.txt_parser.batch_parse_txt(selected_files)
+            
+            print(f"成功解析 {len(entries)} 个条目")
+            
+            output_file = output_dir / f"{output_name}.json"
+            
+            metadata = {
+                'name': output_name,
+                'description': f'从UID {uid_start}-{uid_end} 的 {len(selected_files)} 个TXT文件合并',
+            }
+            
+            self.json_generator.generate_worldbook_json(entries, str(output_file), metadata, format)
+            
+            print(f"成功生成JSON文件: {output_file}")
+            
+            stats = self.json_generator.get_entry_statistics(entries)
+            print(f"\n统计信息:")
+            print(f"  总条目数: {stats['total']}")
+            print(f"  常量条目: {stats['constant']}")
+            print(f"  可选条目: {stats['selective']}")
+            print(f"  启用条目: {stats['enabled']}")
+            print(f"  禁用条目: {stats['disabled']}")
+            print(f"  Order范围: {stats['order_range']['min']} - {stats['order_range']['max']}")
+            
+        except Exception as e:
+            print(f"合并失败: {e}")
+            import traceback
+            traceback.print_exc()
+    
+    def batch_set_uid(self, uid_spec: str, txt_dir: str = None) -> None:
+        """
+        批量设置UID
+        
+        Args:
+            uid_spec: UID规格（范围"1-100"或列表"1,7,10,100"）
+            txt_dir: TXT目录
+        """
+        print(f"正在批量设置UID: {uid_spec}")
+        
+        if txt_dir is None:
+            txt_dir = self.config.get_directory('txt')
+        else:
+            txt_dir = Path(txt_dir)
+        
+        try:
+            # 解析UID规格
+            uid_list = self._parse_uid_spec(uid_spec)
+            
+            # 获取所有TXT文件
+            txt_files = list(txt_dir.glob('*.txt'))
+            txt_files.sort(key=lambda x: x.name)
+            
+            if len(uid_list) != len(txt_files):
+                print(f"警告: UID数量({len(uid_list)})与文件数量({len(txt_files)})不匹配")
+            
+            print(f"找到 {len(txt_files)} 个TXT文件需要更新")
+            
+            updated_count = 0
+            for i, txt_file in enumerate(txt_files):
+                if i >= len(uid_list):
+                    break
+                
+                try:
+                    content = load_text_file(str(txt_file))
+                    lines = content.split('\n')
+                    
+                    # 查找并替换UID行
+                    for j, line in enumerate(lines):
+                        if line.strip().startswith("UID:"):
+                            lines[j] = f"UID: {uid_list[i]}"
+                            break
+                    
+                    # 保存文件
+                    save_text_file('\n'.join(lines), str(txt_file))
+                    updated_count += 1
+                    
+                except Exception as e:
+                    print(f"更新失败 {txt_file.name}: {e}")
+            
+            print(f"成功更新 {updated_count} 个文件")
+            
+        except Exception as e:
+            print(f"批量设置UID失败: {e}")
+            import traceback
+            traceback.print_exc()
+    
+    def _parse_uid_spec(self, uid_spec: str) -> List[int]:
+        """
+        解析UID规格
+        
+        Args:
+            uid_spec: UID规格（范围"1-100"或列表"1,7,10,100"）
+            
+        Returns:
+            UID列表
+        """
+        if '-' in uid_spec:
+            # 范围格式："1-100"
+            start, end = map(int, uid_spec.split('-'))
+            return list(range(start, end + 1))
+        elif ',' in uid_spec:
+            # 列表格式："1,7,10,100"
+            return [int(uid.strip()) for uid in uid_spec.split(',')]
+        else:
+            # 单个UID
+            return [int(uid_spec)]
+    
+    def batch_set_position(self, position: str, txt_dir: str = None,
+                         uid_start: int = None, uid_end: int = None) -> None:
+        """
+        批量设置Position
+        
+        Args:
+            position: 位置类型（字符串或数字）
+            txt_dir: TXT目录
+            uid_start: 起始UID（可选）
+            uid_end: 结束UID（可选）
+        """
+        print(f"正在批量设置Position: {position}")
+        
+        if txt_dir is None:
+            txt_dir = self.config.get_directory('txt')
+        else:
+            txt_dir = Path(txt_dir)
+        
+        try:
+            # 获取所有TXT文件
+            txt_files = list(txt_dir.glob('*.txt'))
+            
+            # 筛选指定UID范围的文件
+            selected_files = []
+            for txt_file in txt_files:
+                # 从文件内容中读取UID（而不是从文件名）
+                try:
+                    content = load_text_file(str(txt_file))
+                    uid = self.txt_parser.get_uid_from_content(content)
+                except:
+                    uid = None
+                
+                if uid is None:
+                    continue
+                if uid_start is not None and uid_end is not None:
+                    if uid_start <= uid <= uid_end:
+                        selected_files.append(txt_file)
+                else:
+                    selected_files.append(txt_file)
+            
+            print(f"找到 {len(selected_files)} 个TXT文件需要更新")
+            
+            updated_count = 0
+            for txt_file in selected_files:
+                try:
+                    content = load_text_file(str(txt_file))
+                    lines = content.split('\n')
+                    
+                    # 查找并替换Position行
+                    for i, line in enumerate(lines):
+                        if line.strip().startswith("Position:"):
+                            lines[i] = f"Position: {position}"
+                            break
+                    
+                    # 保存文件
+                    save_text_file('\n'.join(lines), str(txt_file))
+                    updated_count += 1
+                    
+                except Exception as e:
+                    print(f"更新失败 {txt_file.name}: {e}")
+            
+            print(f"成功更新 {updated_count} 个文件")
+            
+        except Exception as e:
+            print(f"批量设置Position失败: {e}")
+            import traceback
+            traceback.print_exc()
+    
+    def batch_set_strategy(self, strategy: str, txt_dir: str = None,
+                         uid_start: int = None, uid_end: int = None) -> None:
+        """
+        批量设置Strategy（激活策略）
+        
+        Args:
+            strategy: 策略类型（constant/selective/vectorized）
+            txt_dir: TXT目录
+            uid_start: 起始UID（可选）
+            uid_end: 结束UID（可选）
+        """
+        print(f"正在批量设置Strategy: {strategy}")
+        
+        if txt_dir is None:
+            txt_dir = self.config.get_directory('txt')
+        else:
+            txt_dir = Path(txt_dir)
+        
+        try:
+            # 根据策略类型设置相应的布尔字段
+            if strategy == 'constant':
+                constant_value = 'true'
+                selective_value = 'false'
+                vectorized_value = 'false'
+            elif strategy == 'selective':
+                constant_value = 'false'
+                selective_value = 'true'
+                vectorized_value = 'false'
+            elif strategy == 'vectorized':
+                constant_value = 'false'
+                selective_value = 'false'
+                vectorized_value = 'true'
+            else:
+                print(f"错误: 未知的策略类型 - {strategy}")
+                return
+            
+            # 获取所有TXT文件
+            txt_files = list(txt_dir.glob('*.txt'))
+            
+            # 筛选指定UID范围的文件
+            selected_files = []
+            for txt_file in txt_files:
+                # 从文件内容中读取UID（而不是从文件名）
+                try:
+                    content = load_text_file(str(txt_file))
+                    uid = self.txt_parser.get_uid_from_content(content)
+                except:
+                    uid = None
+                
+                if uid is None:
+                    continue
+                if uid_start is not None and uid_end is not None:
+                    if uid_start <= uid <= uid_end:
+                        selected_files.append(txt_file)
+                else:
+                    selected_files.append(txt_file)
+            
+            print(f"找到 {len(selected_files)} 个TXT文件需要更新")
+            
+            updated_count = 0
+            for txt_file in selected_files:
+                try:
+                    content = load_text_file(str(txt_file))
+                    lines = content.split('\n')
+                    
+                    # 查找并替换策略字段
+                    for i, line in enumerate(lines):
+                        if line.strip().startswith("Constant:"):
+                            lines[i] = f"Constant: {constant_value}"
+                        elif line.strip().startswith("Selective:"):
+                            lines[i] = f"Selective: {selective_value}"
+                        elif line.strip().startswith("Vectorized:"):
+                            lines[i] = f"Vectorized: {vectorized_value}"
+                    
+                    # 保存文件
+                    save_text_file('\n'.join(lines), str(txt_file))
+                    updated_count += 1
+                    
+                except Exception as e:
+                    print(f"更新失败 {txt_file.name}: {e}")
+            
+            print(f"成功更新 {updated_count} 个文件")
+            
+        except Exception as e:
+            print(f"批量设置Strategy失败: {e}")
+            import traceback
+            traceback.print_exc()
+    
+    def batch_set_recursion(self, recursion_params: str, txt_dir: str = None,
+                            uid_start: int = None, uid_end: int = None) -> None:
+        """
+        批量设置Recursion（递归控制）
+        
+        Args:
+            recursion_params: 递归控制参数（格式：prevent_incoming,prevent_outgoing,delay_until）
+            txt_dir: TXT目录
+            uid_start: 起始UID（可选）
+            uid_end: 结束UID（可选）
+        """
+        print(f"正在批量设置Recursion: {recursion_params}")
+        
+        if txt_dir is None:
+            txt_dir = self.config.get_directory('txt')
+        else:
+            txt_dir = Path(txt_dir)
+        
+        try:
+            # 解析递归参数
+            params = [p.strip() for p in recursion_params.split(',')]
+            if len(params) != 3:
+                print(f"错误: 参数格式不正确，需要3个参数（prevent_incoming,prevent_outgoing,delay_until）")
+                return
+            
+            prevent_incoming = params[0]
+            prevent_outgoing = params[1]
+            delay_until = params[2]
+            
+            # 获取所有TXT文件
+            txt_files = list(txt_dir.glob('*.txt'))
+            
+            # 筛选指定UID范围的文件
+            selected_files = []
+            for txt_file in txt_files:
+                # 从文件内容中读取UID（而不是从文件名）
+                try:
+                    content = load_text_file(str(txt_file))
+                    uid = self.txt_parser.get_uid_from_content(content)
+                except:
+                    uid = None
+                
+                if uid is None:
+                    continue
+                if uid_start is not None and uid_end is not None:
+                    if uid_start <= uid <= uid_end:
+                        selected_files.append(txt_file)
+                else:
+                    selected_files.append(txt_file)
+            
+            print(f"找到 {len(selected_files)} 个TXT文件需要更新")
+            
+            updated_count = 0
+            for txt_file in selected_files:
+                try:
+                    content = load_text_file(str(txt_file))
+                    lines = content.split('\n')
+                    
+                    # 查找并替换递归字段
+                    for i, line in enumerate(lines):
+                        if line.strip().startswith("ExcludeRecursion:"):
+                            lines[i] = f"ExcludeRecursion: {prevent_incoming}"
+                        elif line.strip().startswith("PreventRecursion:"):
+                            lines[i] = f"PreventRecursion: {prevent_outgoing}"
+                        elif line.strip().startswith("DelayUntilRecursion:"):
+                            lines[i] = f"DelayUntilRecursion: {delay_until}"
+                    
+                    # 保存文件
+                    save_text_file('\n'.join(lines), str(txt_file))
+                    updated_count += 1
+                    
+                except Exception as e:
+                    print(f"更新失败 {txt_file.name}: {e}")
+            
+            print(f"成功更新 {updated_count} 个文件")
+            
+        except Exception as e:
+            print(f"批量设置Recursion失败: {e}")
+            import traceback
+            traceback.print_exc()
+    
+    def batch_set_effect(self, effect_params: str, txt_dir: str = None,
+                        uid_start: int = None, uid_end: int = None) -> None:
+        """
+        批量设置Effect（效果控制）
+        
+        Args:
+            effect_params: 效果控制参数（格式：sticky,cooldown,delay）
+            txt_dir: TXT目录
+            uid_start: 起始UID（可选）
+            uid_end: 结束UID（可选）
+        """
+        print(f"正在批量设置Effect: {effect_params}")
+        
+        if txt_dir is None:
+            txt_dir = self.config.get_directory('txt')
+        else:
+            txt_dir = Path(txt_dir)
+        
+        try:
+            # 解析效果参数
+            params = [p.strip() for p in effect_params.split(',')]
+            if len(params) != 3:
+                print(f"错误: 参数格式不正确，需要3个参数（sticky,cooldown,delay）")
+                return
+            
+            sticky = params[0]
+            cooldown = params[1]
+            delay = params[2]
+            
+            # 获取所有TXT文件
+            txt_files = list(txt_dir.glob('*.txt'))
+            
+            # 筛选指定UID范围的文件
+            selected_files = []
+            for txt_file in txt_files:
+                # 从文件内容中读取UID（而不是从文件名）
+                try:
+                    content = load_text_file(str(txt_file))
+                    uid = self.txt_parser.get_uid_from_content(content)
+                except:
+                    uid = None
+                
+                if uid is None:
+                    continue
+                if uid_start is not None and uid_end is not None:
+                    if uid_start <= uid <= uid_end:
+                        selected_files.append(txt_file)
+                else:
+                    selected_files.append(txt_file)
+            
+            print(f"找到 {len(selected_files)} 个TXT文件需要更新")
+            
+            updated_count = 0
+            for txt_file in selected_files:
+                try:
+                    content = load_text_file(str(txt_file))
+                    lines = content.split('\n')
+                    
+                    # 查找并替换效果字段
+                    for i, line in enumerate(lines):
+                        if line.strip().startswith("Sticky:"):
+                            lines[i] = f"Sticky: {sticky}"
+                        elif line.strip().startswith("Cooldown:"):
+                            lines[i] = f"Cooldown: {cooldown}"
+                        elif line.strip().startswith("Delay:"):
+                            lines[i] = f"Delay: {delay}"
+                    
+                    # 保存文件
+                    save_text_file('\n'.join(lines), str(txt_file))
+                    updated_count += 1
+                    
+                except Exception as e:
+                    print(f"更新失败 {txt_file.name}: {e}")
+            
+            print(f"成功更新 {updated_count} 个文件")
+            
+        except Exception as e:
+            print(f"批量设置Effect失败: {e}")
+            import traceback
+            traceback.print_exc()
+    
+    def batch_set_newname(self, new_name: str, txt_dir: str = None, 
+                          uid_start: int = None, uid_end: int = None) -> None:
+        """
+        批量设置WorldBook_NewName
+        
+        Args:
+            new_name: 新的世界书名称
+            txt_dir: TXT目录
+            uid_start: 起始UID（可选）
+            uid_end: 结束UID（可选）
+        """
+        print(f"正在批量设置WorldBook_NewName: {new_name}")
+        
+        if txt_dir is None:
+            txt_dir = self.config.get_directory('txt')
+        else:
+            txt_dir = Path(txt_dir)
+        
+        try:
+            # 获取所有TXT文件
+            txt_files = list(txt_dir.glob('*.txt'))
+            
+            # 筛选指定UID范围的文件
+            selected_files = []
+            for txt_file in txt_files:
+                # 从文件内容中读取UID（而不是从文件名）
+                try:
+                    content = load_text_file(str(txt_file))
+                    uid = self.txt_parser.get_uid_from_content(content)
+                except:
+                    uid = None
+                
+                if uid is None:
+                    continue
+                if uid_start is not None and uid_end is not None:
+                    if uid_start <= uid <= uid_end:
+                        selected_files.append(txt_file)
+                else:
+                    selected_files.append(txt_file)
+            
+            print(f"找到 {len(selected_files)} 个TXT文件需要更新")
+            
+            updated_count = 0
+            for txt_file in selected_files:
+                try:
+                    content = load_text_file(str(txt_file))
+                    lines = content.split('\n')
+                    
+                    # 查找并替换WorldBook_NewName行
+                    for i, line in enumerate(lines):
+                        if line.strip().startswith("WorldBook_NewName:"):
+                            lines[i] = f"WorldBook_NewName: {new_name}"
+                            break
+                    
+                    # 保存文件
+                    save_text_file('\n'.join(lines), str(txt_file))
+                    updated_count += 1
+                    
+                except Exception as e:
+                    print(f"更新失败 {txt_file.name}: {e}")
+            
+            print(f"成功更新 {updated_count} 个文件")
+            
+        except Exception as e:
+            print(f"批量设置失败: {e}")
+            import traceback
+            traceback.print_exc()
+    
+    def batch_update_field(self, field_name: str, field_value: str, txt_dir: str = None,
+                          uid_start: int = None, uid_end: int = None) -> None:
+        """
+        批量更新字段值
+        
+        Args:
+            field_name: 字段名
+            field_value: 字段值
+            txt_dir: TXT目录
+            uid_start: 起始UID（可选）
+            uid_end: 结束UID（可选）
+        """
+        print(f"正在批量更新字段: {field_name} = {field_value}")
+        
+        if txt_dir is None:
+            txt_dir = self.config.get_directory('txt')
+        else:
+            txt_dir = Path(txt_dir)
+        
+        try:
+            # 获取所有TXT文件
+            txt_files = list(txt_dir.glob('*.txt'))
+            
+            # 筛选指定UID范围的文件
+            selected_files = []
+            for txt_file in txt_files:
+                # 从文件内容中读取UID（而不是从文件名）
+                try:
+                    content = load_text_file(str(txt_file))
+                    uid = self.txt_parser.get_uid_from_content(content)
+                except:
+                    uid = None
+                
+                if uid is None:
+                    continue
+                if uid_start is not None and uid_end is not None:
+                    if uid_start <= uid <= uid_end:
+                        selected_files.append(txt_file)
+                else:
+                    selected_files.append(txt_file)
+            
+            print(f"找到 {len(selected_files)} 个TXT文件需要更新")
+            
+            updated_count = 0
+            for txt_file in selected_files:
+                try:
+                    content = load_text_file(str(txt_file))
+                    lines = content.split('\n')
+                    
+                    # 查找并替换字段行
+                    for i, line in enumerate(lines):
+                        if line.strip().startswith(f"{field_name}:"):
+                            lines[i] = f"{field_name}: {field_value}"
+                            break
+                    
+                    # 保存文件
+                    save_text_file('\n'.join(lines), str(txt_file))
+                    updated_count += 1
+                    
+                except Exception as e:
+                    print(f"更新失败 {txt_file.name}: {e}")
+            
+            print(f"成功更新 {updated_count} 个文件")
+            
+        except Exception as e:
+            print(f"批量更新失败: {e}")
+            import traceback
+            traceback.print_exc()
+    
+    def list_txt_files(self, txt_dir: str = None) -> None:
+        """
+        列出TXT文件
+        
+        Args:
+            txt_dir: TXT目录
+        """
+        if txt_dir is None:
+            txt_dir = self.config.get_directory('txt')
+        else:
+            txt_dir = Path(txt_dir)
+        
+        if not txt_dir.exists():
+            print(f"目录不存在: {txt_dir}")
+            return
+        
+        txt_files = list(txt_dir.glob('*.txt'))
+        
+        if not txt_files:
+            print(f"目录中没有TXT文件: {txt_dir}")
+            return
+        
+        print(f"找到 {len(txt_files)} 个TXT文件:\n")
+        
+        for txt_file in sorted(txt_files):
+            info = self.txt_parser.get_txt_file_info(str(txt_file))
+            size = format_file_size(info['size'])
+            
+            print(f"文件: {info['name']}")
+            print(f"  UID: {info['uid']}")
+            print(f"  注释: {info['comment']}")
+            print(f"  旧名称: {info['worldbook_old_name'] or '(无)'}")
+            print(f"  新名称: {info['worldbook_new_name'] or '(无)'}")
+            print(f"  大小: {size}")
+            print()
+    
+    def extract_by_key(self, source_dir: str, keywords: str, output_dir: str = None) -> None:
+        """
+        根据指定的关键词提取包含该关键词的TXT文件到指定目录
+        
+        Args:
+            source_dir: 源TXT目录
+            keywords: 关键词（单个"XX"或多个"XX,YY,ZZ"）
+            output_dir: 输出目录（默认: TXT/extracted/{源目录名}/）
+        """
+        print(f"正在根据关键词提取TXT文件")
+        
+        source_path = Path(source_dir)
+        if not source_path.exists():
+            print(f"错误: 源目录不存在 - {source_dir}")
+            return
+        
+        if output_dir is None:
+            output_dir = self.config.get_directory('txt') / 'extracted' / source_path.name
+        else:
+            output_dir = Path(output_dir)
+        
+        ensure_directory_exists(output_dir)
+        
+        try:
+            txt_files = list(source_path.glob('*.txt'))
+            print(f"找到 {len(txt_files)} 个TXT文件")
+            
+            keyword_list = [k.strip() for k in keywords.split(',')]
+            print(f"提取关键词: {', '.join(keyword_list)}")
+            
+            matched_files = []
+            
+            for txt_file in txt_files:
+                try:
+                    entry = self.txt_parser.parse_txt_file(str(txt_file))
+                    keys = entry.get('key', [])
+                    
+                    if keys:
+                        for keyword in keyword_list:
+                            if keyword in keys:
+                                matched_files.append(txt_file)
+                                break
+                except Exception as e:
+                    print(f"解析失败 {txt_file.name}: {e}")
+            
+            print(f"找到 {len(matched_files)} 个包含指定关键词的文件")
+            
+            moved_count = 0
+            for txt_file in matched_files:
+                dest_file = output_dir / txt_file.name
+                shutil.move(str(txt_file), str(dest_file))
+                moved_count += 1
+                print(f"移动: {txt_file.name}")
+            
+            print(f"成功移动 {moved_count} 个文件到 {output_dir}")
+            
+        except Exception as e:
+            print(f"提取失败: {e}")
+            import traceback
+            traceback.print_exc()
+    
+    def add_keywords(self, keywords: str, txt_dir: str, uid: int) -> None:
+        """
+        为指定UID的TXT文件添加关键字
+        
+        Args:
+            keywords: 关键字（单个"XX"或多个"XX,YY,ZZ"）
+            txt_dir: TXT目录
+            uid: 指定UID
+        """
+        print(f"正在为UID {uid} 添加关键字: {keywords}")
+        
+        txt_path = Path(txt_dir)
+        if not txt_path.exists():
+            print(f"错误: 目录不存在 - {txt_dir}")
+            return
+        
+        try:
+            txt_files = list(txt_path.glob('*.txt'))
+            
+            target_file = None
+            for txt_file in txt_files:
+                # 从文件内容中读取UID（而不是从文件名）
+                try:
+                    content = load_text_file(str(txt_file))
+                    file_uid = self.txt_parser.get_uid_from_content(content)
+                except:
+                    file_uid = None
+                
+                if file_uid == uid:
+                    target_file = txt_file
+                    break
+            
+            if not target_file:
+                print(f"错误: 未找到UID为 {uid} 的TXT文件")
+                return
+            
+            content = load_text_file(str(target_file))
+            lines = content.split('\n')
+            
+            keyword_list = [k.strip() for k in keywords.split(',')]
+            
+            for i, line in enumerate(lines):
+                if line.strip().startswith("Key:"):
+                    existing_keys = line.split(':', 1)[1].strip()
+                    if existing_keys and existing_keys != '[]':
+                        try:
+                            import json
+                            existing_list = json.loads(existing_keys)
+                            keyword_list = existing_list + keyword_list
+                        except:
+                            pass
+                    
+                    import json
+                    new_keys = json.dumps(keyword_list, ensure_ascii=False)
+                    lines[i] = f"Key: {new_keys}"
+                    break
+            
+            save_text_file('\n'.join(lines), str(target_file))
+            print(f"成功添加 {len(keyword_list)} 个关键字到 {target_file.name}")
+            
+        except Exception as e:
+            print(f"添加关键字失败: {e}")
+            import traceback
+            traceback.print_exc()
+    
+    def batch_add_keywords(self, keywords: str, txt_dir: str = None, uid_start: int = None, uid_end: int = None) -> None:
+        """
+        批量为多个UID添加关键字
+        
+        Args:
+            keywords: 关键字（单个"XX"或多个"XX,YY,ZZ"）
+            txt_dir: TXT目录
+            uid_start: 起始UID（可选）
+            uid_end: 结束UID（可选）
+        """
+        print(f"正在批量添加关键字: {keywords}")
+        
+        if txt_dir is None:
+            txt_dir = self.config.get_directory('txt')
+        else:
+            txt_dir = Path(txt_dir)
+        
+        if not txt_dir.exists():
+            print(f"错误: 目录不存在 - {txt_dir}")
+            return
+        
+        try:
+            txt_files = list(txt_dir.glob('*.txt'))
+            print(f"找到 {len(txt_files)} 个TXT文件")
+            
+            keyword_list = [k.strip() for k in keywords.split(',')]
+            updated_count = 0
+            
+            for txt_file in txt_files:
+                # 从文件内容中读取UID（而不是从文件名）
+                try:
+                    content = load_text_file(str(txt_file))
+                    file_uid = self.txt_parser.get_uid_from_content(content)
+                except:
+                    file_uid = None
+                
+                if uid_start is not None and file_uid < uid_start:
+                    continue
+                if uid_end is not None and file_uid > uid_end:
+                    continue
+                
+                content = load_text_file(str(txt_file))
+                lines = content.split('\n')
+                
+                for i, line in enumerate(lines):
+                    if line.strip().startswith("Key:"):
+                        existing_keys = line.split(':', 1)[1].strip()
+                        if existing_keys and existing_keys != '[]':
+                            try:
+                                import json
+                                existing_list = json.loads(existing_keys)
+                                new_keyword_list = existing_list + keyword_list
+                            except:
+                                new_keyword_list = keyword_list
+                        else:
+                            new_keyword_list = keyword_list
+                        
+                        import json
+                        new_keys = json.dumps(new_keyword_list, ensure_ascii=False)
+                        lines[i] = f"Key: {new_keys}"
+                        updated_count += 1
+                        break
+                
+                save_text_file('\n'.join(lines), str(txt_file))
+            
+            print(f"成功为 {updated_count} 个文件添加关键字")
+            
+        except Exception as e:
+            print(f"批量添加关键字失败: {e}")
+            import traceback
+            traceback.print_exc()
+    
+    def remove_keywords(self, keywords: str, txt_dir: str, uid: int) -> None:
+        """
+        从指定UID的TXT文件中删除关键字
+        
+        Args:
+            keywords: 关键字（单个"XX"或多个"XX,YY,ZZ"）
+            txt_dir: TXT目录
+            uid: 指定UID
+        """
+        print(f"正在从UID {uid} 删除关键字: {keywords}")
+        
+        txt_path = Path(txt_dir)
+        if not txt_path.exists():
+            print(f"错误: 目录不存在 - {txt_dir}")
+            return
+        
+        try:
+            txt_files = list(txt_path.glob('*.txt'))
+            
+            target_file = None
+            for txt_file in txt_files:
+                # 从文件内容中读取UID（而不是从文件名）
+                try:
+                    content = load_text_file(str(txt_file))
+                    file_uid = self.txt_parser.get_uid_from_content(content)
+                except:
+                    file_uid = None
+                
+                if file_uid == uid:
+                    target_file = txt_file
+                    break
+            
+            if not target_file:
+                print(f"错误: 未找到UID为 {uid} 的TXT文件")
+                return
+            
+            content = load_text_file(str(target_file))
+            lines = content.split('\n')
+            
+            keywords_to_remove = [k.strip() for k in keywords.split(',')]
+            
+            for i, line in enumerate(lines):
+                if line.strip().startswith("Key:"):
+                    existing_keys = line.split(':', 1)[1].strip()
+                    if existing_keys and existing_keys != '[]':
+                        try:
+                            import json
+                            existing_list = json.loads(existing_keys)
+                            new_list = [k for k in existing_list if k not in keywords_to_remove]
+                            
+                            new_keys = json.dumps(new_list, ensure_ascii=False)
+                            lines[i] = f"Key: {new_keys}"
+                            break
+                        except:
+                            pass
+            
+            save_text_file('\n'.join(lines), str(target_file))
+            print(f"成功删除 {len(keywords_to_remove)} 个关键字从 {target_file.name}")
+            
+        except Exception as e:
+            print(f"删除关键字失败: {e}")
+            import traceback
+            traceback.print_exc()
+    
+    def clear_keywords(self, txt_dir: str, uid: int) -> None:
+        """
+        清空指定UID的TXT文件的所有关键字
+        
+        Args:
+            txt_dir: TXT目录
+            uid: 指定UID
+        """
+        print(f"正在清空UID {uid} 的所有关键字")
+        
+        txt_path = Path(txt_dir)
+        if not txt_path.exists():
+            print(f"错误: 目录不存在 - {txt_dir}")
+            return
+        
+        try:
+            txt_files = list(txt_path.glob('*.txt'))
+            
+            target_file = None
+            for txt_file in txt_files:
+                # 从文件内容中读取UID（而不是从文件名）
+                try:
+                    content = load_text_file(str(txt_file))
+                    file_uid = self.txt_parser.get_uid_from_content(content)
+                except:
+                    file_uid = None
+                
+                if file_uid == uid:
+                    target_file = txt_file
+                    break
+            
+            if not target_file:
+                print(f"错误: 未找到UID为 {uid} 的TXT文件")
+                return
+            
+            content = load_text_file(str(target_file))
+            lines = content.split('\n')
+            
+            for i, line in enumerate(lines):
+                if line.strip().startswith("Key:"):
+                    lines[i] = "Key: []"
+                    break
+            
+            save_text_file('\n'.join(lines), str(target_file))
+            print(f"成功清空 {target_file.name} 的所有关键字")
+            
+        except Exception as e:
+            print(f"清空关键字失败: {e}")
+            import traceback
+            traceback.print_exc()
+    
+    def batch_clear_keywords(self, txt_dir: str = None, uid_start: int = None, uid_end: int = None) -> None:
+        """
+        批量清空多个TXT文件的所有关键字
+        
+        Args:
+            txt_dir: TXT目录
+            uid_start: 起始UID（可选）
+            uid_end: 结束UID（可选）
+        """
+        print(f"正在批量清空关键字")
+        
+        if txt_dir is None:
+            txt_dir = self.config.get_directory('txt')
+        else:
+            txt_dir = Path(txt_dir)
+        
+        if not txt_dir.exists():
+            print(f"错误: 目录不存在 - {txt_dir}")
+            return
+        
+        try:
+            txt_files = list(txt_dir.glob('*.txt'))
+            print(f"找到 {len(txt_files)} 个TXT文件")
+            
+            updated_count = 0
+            for txt_file in txt_files:
+                # 从文件内容中读取UID（而不是从文件名）
+                try:
+                    content = load_text_file(str(txt_file))
+                    file_uid = self.txt_parser.get_uid_from_content(content)
+                except:
+                    file_uid = None
+                
+                if uid_start is not None and file_uid < uid_start:
+                    continue
+                if uid_end is not None and file_uid > uid_end:
+                    continue
+                
+                content = load_text_file(str(txt_file))
+                lines = content.split('\n')
+                
+                for i, line in enumerate(lines):
+                    if line.strip().startswith("Key:"):
+                        existing_keys = line.split(':', 1)[1].strip()
+                        if existing_keys and existing_keys != '[]':
+                            lines[i] = "Key: []"
+                            updated_count += 1
+                            break
+                
+                save_text_file('\n'.join(lines), str(txt_file))
+            
+            print(f"成功清空 {updated_count} 个文件的关键字")
+            
+        except Exception as e:
+            print(f"批量清空关键字失败: {e}")
+            import traceback
+            traceback.print_exc()
+    
+    def extract_constant(self, source_dir: str, output_dir: str = None) -> None:
+        """
+        提取常量（蓝灯）条目到指定目录
+        
+        Args:
+            source_dir: 源TXT目录
+            output_dir: 输出目录（默认: TXT/constant/{源目录名}/）
+        """
+        print(f"正在提取常量（蓝灯）条目")
+        
+        source_path = Path(source_dir)
+        if not source_path.exists():
+            print(f"错误: 源目录不存在 - {source_dir}")
+            return
+        
+        if output_dir is None:
+            output_dir = self.config.get_directory('txt') / 'constant' / source_path.name
+        else:
+            output_dir = Path(output_dir)
+        
+        ensure_directory_exists(output_dir)
+        
+        try:
+            txt_files = list(source_path.glob('*.txt'))
+            print(f"找到 {len(txt_files)} 个TXT文件")
+            
+            constant_files = []
+            
+            for txt_file in txt_files:
+                try:
+                    entry = self.txt_parser.parse_txt_file(str(txt_file))
+                    constant = entry.get('constant', False)
+                    
+                    if isinstance(constant, bool) and constant:
+                        constant_files.append(txt_file)
+                    elif isinstance(constant, str) and constant.lower() == 'true':
+                        constant_files.append(txt_file)
+                except Exception as e:
+                    print(f"解析失败 {txt_file.name}: {e}")
+            
+            print(f"找到 {len(constant_files)} 个常量条目")
+            
+            for txt_file in constant_files:
+                dest_file = output_dir / txt_file.name
+                shutil.move(str(txt_file), str(dest_file))
+            
+            print(f"成功移动 {len(constant_files)} 个常量条目到 {output_dir}")
+            
+        except Exception as e:
+            print(f"提取失败: {e}")
+            import traceback
+            traceback.print_exc()
+    
+    def batch_move(self, source: str, output_dir: str) -> None:
+        """
+        批量移动TXT文件到指定目录
+        
+        Args:
+            source: 源文件路径（支持通配符）
+            output_dir: 目标目录
+        """
+        print(f"正在批量移动文件")
+        
+        output_path = Path(output_dir)
+        ensure_directory_exists(output_path)
+        
+        try:
+            source_files = []
+            if '*' in source or '?' in source:
+                source_files = glob.glob(source)
+            else:
+                source_files = [source]
+            
+            print(f"找到 {len(source_files)} 个文件")
+            
+            moved_count = 0
+            for source_file in source_files:
+                source_path = Path(source_file)
+                if source_path.exists():
+                    dest_file = output_path / source_path.name
+                    shutil.move(str(source_path), str(dest_file))
+                    moved_count += 1
+            
+            print(f"成功移动 {moved_count} 个文件到 {output_dir}")
+            
+        except Exception as e:
+            print(f"批量移动失败: {e}")
+            import traceback
+            traceback.print_exc()
+    
+    def remove(self, path: str, recursive: bool = False) -> None:
+        """
+        删除TXT子目录或文件
+        
+        Args:
+            path: 路径（目录或文件）
+            recursive: 是否递归删除目录
+        """
+        print(f"正在删除: {path}")
+        
+        target_path = Path(path)
+        
+        if not target_path.exists():
+            print(f"错误: 路径不存在 - {path}")
+            return
+        
+        try:
+            if target_path.is_file():
+                target_path.unlink()
+                print(f"成功删除文件: {path}")
+            elif target_path.is_dir():
+                if recursive:
+                    shutil.rmtree(str(target_path))
+                    print(f"成功递归删除目录: {path}")
+                else:
+                    print(f"错误: 目录需要使用 -r 参数递归删除")
+                    print(f"使用: python main.py remove \"{path}\" -r")
+            
+        except Exception as e:
+            print(f"删除失败: {e}")
+            import traceback
+            traceback.print_exc()
+
+
+def main():
+    """主函数"""
+    parser = setup_parser()
+    args = parser.parse_args()
+    
+    if not args.command:
+        parser.print_help()
+        return
+    
+    manager = WorldBookManager()
+    
+    if args.command == 'split':
+        manager.split_worldbook(args.json_file, args.output_dir)
+    
+    elif args.command == 'merge':
+        txt_files = []
+        txt_path = Path(args.txt)
+        
+        if txt_path.is_dir():
+            txt_files = [str(f) for f in txt_path.glob('*.txt')]
+        elif '*' in args.txt or '?' in args.txt:
+            txt_files = glob.glob(args.txt)
+        elif txt_path.exists():
+            txt_files = [args.txt]
+        else:
+            print(f"错误: 路径不存在 - {args.txt}")
+            return
+        
+        manager.merge_worldbook(
+            args.name,
+            txt_files,
+            args.output_dir,
+            None,
+            args.format
+        )
+    
+    elif args.command == 'create':
+        output_dir = args.output_dir if args.output_dir else 'TXT/TMP'
+        manager.create_template(args.name, output_dir, args.uid, args.order)
+    
+    elif args.command == 'list':
+        manager.list_txt_files(args.txt_dir)
+    
+    elif args.command == 'batch-set-uid':
+        manager.batch_set_uid(args.uid_spec, args.txt)
+    
+    elif args.command == 'batch-set-newname':
+        manager.batch_set_newname(args.new_name, args.txt, args.uid_start, args.uid_end)
+    
+    elif args.command == 'batch-set-order':
+        manager.batch_update_field('Order', args.order_value, args.txt, args.uid_start, args.uid_end)
+    
+    elif args.command == 'batch-set-position':
+        manager.batch_set_position(args.position, args.txt, args.uid_start, args.uid_end)
+    
+    elif args.command == 'batch-set-strategy':
+        manager.batch_set_strategy(args.strategy, args.txt, args.uid_start, args.uid_end)
+    
+    elif args.command == 'batch-set-recursion':
+        manager.batch_set_recursion(args.recursion_params, args.txt, args.uid_start, args.uid_end)
+    
+    elif args.command == 'batch-set-effect':
+        manager.batch_set_effect(args.effect_params, args.txt, args.uid_start, args.uid_end)
+    
+    elif args.command == 'batch-update-field':
+        manager.batch_update_field(args.field_name, args.field_value, args.txt, args.uid_start, args.uid_end)
+    
+    elif args.command == 'extract-by-key':
+        manager.extract_by_key(args.source_dir, args.keywords, args.output_dir)
+    
+    elif args.command == 'add-keywords':
+        manager.add_keywords(args.keywords, args.txt, args.uid)
+    
+    elif args.command == 'batch-add-keywords':
+        manager.batch_add_keywords(args.keywords, args.txt, args.uid_start, args.uid_end)
+    
+    elif args.command == 'remove-keywords':
+        manager.remove_keywords(args.keywords, args.txt, args.uid)
+    
+    elif args.command == 'clear-keywords':
+        manager.clear_keywords(args.txt, args.uid)
+    
+    elif args.command == 'batch-clear-keywords':
+        manager.batch_clear_keywords(args.txt, args.uid_start, args.uid_end)
+    
+    elif args.command == 'extract-constant':
+        manager.extract_constant(args.source_dir, args.output_dir)
+    
+    elif args.command == 'batch-move':
+        manager.batch_move(args.source, args.output_dir)
+    
+    elif args.command == 'remove':
+        manager.remove(args.path, args.recursive)
+
+
+if __name__ == '__main__':
+    main()

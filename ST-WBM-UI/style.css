@@ -1,0 +1,109 @@
+/* ST-WBM-UI 注入样式 v1.0
+ * 为 SillyTavern 扩展设置面板注入的世界书管理器入口提供样式。
+ * 配色与独立管理界面保持一致（深色主题，accent: #4fc3f7）
+ */
+
+#wbm-panel {
+  border: 1px solid rgba(79, 195, 247, 0.25);
+  border-radius: 6px;
+  margin-bottom: 10px;
+  overflow: hidden;
+  font-size: 13px;
+  background: rgba(15, 52, 96, 0.4);
+}
+
+#wbm-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  cursor: pointer;
+  user-select: none;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(255, 255, 255, 0.03);
+  transition: background 0.15s;
+}
+
+#wbm-header:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+#wbm-title-text {
+  color: #4fc3f7;
+  font-weight: 600;
+  font-size: 13px;
+}
+
+#wbm-toggle-icon {
+  font-size: 11px;
+  color: #888;
+  transition: transform 0.2s;
+}
+
+#wbm-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px;
+}
+
+#wbm-status-row {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.wbm-badge {
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 10px;
+  border: 1px solid;
+  transition: all 0.2s;
+}
+
+.wbm-badge-ok {
+  border-color: #66bb6a;
+  color: #66bb6a;
+  background: rgba(102, 187, 106, 0.12);
+}
+
+.wbm-badge-fail {
+  border-color: #ef5350;
+  color: #ef5350;
+  background: rgba(239, 83, 80, 0.12);
+}
+
+.wbm-badge-wait {
+  border-color: #ffa726;
+  color: #ffa726;
+  background: rgba(255, 167, 38, 0.12);
+}
+
+#wbm-open-btn {
+  padding: 6px 14px;
+  border: 1px solid #4fc3f7;
+  border-radius: 4px;
+  background: rgba(79, 195, 247, 0.15);
+  color: #4fc3f7;
+  cursor: pointer;
+  font-size: 12px;
+  width: fit-content;
+  transition: background 0.15s;
+}
+
+#wbm-open-btn:hover {
+  background: rgba(79, 195, 247, 0.28);
+}
+
+#wbm-hint {
+  font-size: 11px;
+  color: #666;
+  line-height: 1.6;
+}
+
+#wbm-hint code {
+  color: #9e9e9e;
+  font-family: monospace;
+  font-size: 11px;
+}
