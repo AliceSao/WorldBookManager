@@ -494,6 +494,40 @@
   }
 
   /**
+   * 将世界书同步到 ST 运行时内存
+   * 流程：从后端读取最新条目 → 调用 ST 原生 /api/worldbooks/edit 更新内存缓存
+   * @param {string} worldbookName - 世界书名称
+   * @returns {Promise<boolean>} 是否同步成功
+   */
+  async function syncToST(worldbookName) {
+    try {
+      const csrfToken = await getCsrfToken();
+      // 1. 从后端读取最新条目
+      const getRes = await fetch(`${BACKEND_BASE}/worldbooks/${encodeURIComponent(worldbookName)}`, {
+        credentials: "include",
+      });
+      if (!getRes.ok) return false;
+      const getData = await getRes.json();
+      if (!getData.success || !Array.isArray(getData.data?.entries)) return false;
+      // 2. 构造 ST 格式（entries 键值对象）
+      const entriesObj = {};
+      getData.data.entries.forEach((e, i) => { entriesObj[String(i)] = e; });
+      // 3. 调用 ST 原生编辑端点同步内存
+      const headers = { "Content-Type": "application/json" };
+      if (csrfToken) headers["X-CSRF-Token"] = csrfToken;
+      const syncRes = await fetch("/api/worldbooks/edit", {
+        method: "POST",
+        headers,
+        credentials: "include",
+        body: JSON.stringify({ name: worldbookName, data: { entries: entriesObj } }),
+      });
+      return syncRes.ok;
+    } catch {
+      return false;
+    }
+  }
+
+  /**
    * 22. /wb-copy — 跨世界书复制条目（实现「拆分」和「合并」概念）
    *
    * 拆分：将条目从主世界书复制到临时世界书
@@ -534,9 +568,12 @@
       const data = await res.json();
       if (data.success) {
         const count = data.data?.count ?? resolvedUids.length;
+        // 同步目标世界书到 ST 运行时内存
+        const synced = await syncToST(to);
+        const syncNote = synced ? "" : "\n  ⚠️ ST 同步失败，如需实时生效请在酒馆手动刷新世界书";
         return feedOk(`已复制 ${count} 条条目到「${to}」`,
           `✅ 已将 ${count} 条条目从「${from}」复制到「${to}」\n` +
-          `  新 UID: ${(data.data?.copied_uids || []).slice(0, 5).join(", ")}${count > 5 ? "..." : ""}`);
+          `  新 UID: ${(data.data?.copied_uids || []).slice(0, 5).join(", ")}${count > 5 ? "..." : ""}${syncNote}`);
       } else {
         return feedErr("复制失败", `[错误] ${data.message}`);
       }

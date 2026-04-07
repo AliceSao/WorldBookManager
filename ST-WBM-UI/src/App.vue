@@ -79,6 +79,7 @@
           @dirty="onDirty('left', $event)"
           @status="setStatus"
           @copy-to-other="copyToRight"
+          @refresh-worldbooks="refreshWorldbooks"
         />
       </div>
       <div class="wbm-divider" title="双面板分隔">↔</div>
@@ -91,6 +92,7 @@
           @dirty="onDirty('right', $event)"
           @status="setStatus"
           @copy-to-other="copyToLeft"
+          @refresh-worldbooks="refreshWorldbooks"
         />
       </div>
     </div>
@@ -105,7 +107,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from "vue";
 import Panel from "./components/Panel.vue";
-import { listWorldbooks, saveWorldbook } from "./services/api";
+import { listWorldbooks, saveWorldbook, syncWorldbookToST } from "./services/api";
 import { parseWorldbookJson } from "./utils/worldbook";
 
 const worldbooks = ref<string[]>([]);
@@ -266,8 +268,15 @@ async function importFromFile(event: Event) {
     setStatus(`喵~正在努力导入 "${worldbookName}"（${entries.length} 条）...请稍等一下~ 🐾`, "info");
     const res = await saveWorldbook(worldbookName, entries);
     if (res.success) {
+      // 同步到 ST 运行时内存
+      const synced = await syncWorldbookToST(worldbookName, entries);
       await refreshWorldbooks();
-      setStatus(`喵~导入成功啦！"${worldbookName}"（${entries.length} 条）全部搬进来了~ 📦`, "success");
+      setStatus(
+        synced
+          ? `喵~导入成功啦！"${worldbookName}"（${entries.length} 条）已同步到酒馆~ 📦`
+          : `喵~文件已导入"${worldbookName}"，不过 ST 同步出了点问题...手动刷新世界书嘛？ 🔄`,
+        synced ? "success" : "info"
+      );
     } else {
       setStatus(`呜喵！导入失败了：${res.message}，再试一次嘛？ 😿`, "error");
     }

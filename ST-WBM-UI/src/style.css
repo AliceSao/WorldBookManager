@@ -420,6 +420,38 @@ body {
   min-width: 0;
 }
 
+/* 世界书选择行（select + 新建按钮） */
+.wb-select-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+
+.wb-select-row .wb-select {
+  flex: 1;
+  min-width: 0;
+}
+
+.wb-new-btn {
+  flex-shrink: 0;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  font-size: 15px;
+  line-height: 1;
+  border-radius: 5px;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+
+.wb-new-btn:hover {
+  opacity: 0.85;
+}
+
 /* ─────────── 搜索栏 ─────────── */
 .panel-search {
   padding: 5px 8px;
@@ -1035,17 +1067,17 @@ body {
   .smart-select-row { flex-wrap: wrap; }
 }
 
-/* ─────────── 响应式：手机 ≤768px ─────────── */
+/* ─────────── 响应式：手机/平板 <1100px ─────────── */
 
 /*
  * ★★★ 根本原则 ★★★
- * Vue 应用运行在一个固定高度的 iframe 里。
- * 移动端不能改 body/wbm-app 的 height:100vh。
- * 正确方案：保持固定高度布局，用 tab 切换面板，
+ * Vue 应用运行在一个固定高度的 iframe 里（全屏覆盖）。
+ * <1100px 时切换为单面板 tab 模式，
  * 面板内条目列表自己 overflow-y:auto 滚动。
+ * ≥1100px 时显示双面板桌面布局。
  */
 
-@media (max-width: 768px) {
+@media (max-width: 1099px) {
   /* ── 全局防溢出（不改 height） ── */
   html, body { overflow-x: hidden; max-width: 100vw; }
 

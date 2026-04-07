@@ -2,7 +2,7 @@
   <div class="panel">
     <!-- 面板头部 -->
     <div class="panel-header">
-      <!-- 世界书搜索 + 选择 -->
+      <!-- 世界书搜索 + 选择 + 新建 -->
       <div class="wb-select-wrap">
         <div class="wb-search-row" v-if="worldbooks.length > 6">
           <input
@@ -12,15 +12,18 @@
           />
           <button v-if="wbSearchQuery" class="btn btn-sm btn-icon" @click="wbSearchQuery = ''" title="清空搜索">✕</button>
         </div>
-        <select v-model="selectedWorldbook" class="wb-select" @change="loadWorldbook">
-          <option value="">— 选择世界书 —</option>
-          <option
-            v-if="filteredWorldbookList.length === 0 && wbSearchQuery"
-            disabled
-            value=""
-          >没找到这本世界书喵~ 🐱</option>
-          <option v-for="wb in filteredWorldbookList" :key="wb" :value="wb">{{ wb }}</option>
-        </select>
+        <div class="wb-select-row">
+          <select v-model="selectedWorldbook" class="wb-select" @change="loadWorldbook">
+            <option value="">— 选择世界书 —</option>
+            <option
+              v-if="filteredWorldbookList.length === 0 && wbSearchQuery"
+              disabled
+              value=""
+            >没找到这本世界书喵~ 🐱</option>
+            <option v-for="wb in filteredWorldbookList" :key="wb" :value="wb">{{ wb }}</option>
+          </select>
+          <button class="btn btn-sm btn-icon wb-new-btn" @click="openCreateDialog" title="新建世界书">＋</button>
+        </div>
       </div>
       <span v-if="isDirty" class="dirty-badge" title="有未保存的修改">●</span>
       <span class="entry-count" v-if="selectedWorldbook">{{ filteredEntries.length }}/{{ localEntries.length }}</span>
@@ -183,6 +186,30 @@
       </div>
     </div>
 
+    <!-- 新建世界书弹窗 -->
+    <div v-if="showCreateDialog" class="smart-dialog-overlay" @click.self="cancelCreate">
+      <div class="smart-dialog">
+        <h4>📖 新建世界书</h4>
+        <div style="display:flex;gap:6px;margin-bottom:10px">
+          <input
+            v-model="newWbName"
+            class="editor-input"
+            placeholder="输入世界书名称..."
+            maxlength="100"
+            @keydown.enter="doCreateWorldbook"
+            @keydown.esc="cancelCreate"
+            ref="newWbInputRef"
+          />
+        </div>
+        <div class="dialog-actions">
+          <button class="btn btn-primary btn-sm" @click="doCreateWorldbook" :disabled="!newWbName.trim() || creating">
+            {{ creating ? '⏳ 创建中...' : '✅ 创建' }}
+          </button>
+          <button class="btn btn-sm" @click="cancelCreate">取消</button>
+        </div>
+      </div>
+    </div>
+
     <!-- 智能选中弹窗 -->
     <div v-if="showSmartDialog" class="smart-dialog-overlay" @click.self="showSmartDialog = ''">
       <div class="smart-dialog">
@@ -218,14 +245,14 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, reactive } from "vue";
+import { ref, computed, reactive, nextTick } from "vue";
 import EntryEditor from "./EntryEditor.vue";
 import BatchMenu from "./BatchMenu.vue";
 import type { RawEntry } from "../utils/worldbook";
 import { strategyLabel, positionLabel, cloneEntries, createBlankEntry } from "../utils/worldbook";
 import {
   getWorldbook, saveWorldbook, deleteEntries, addEntries,
-  exportWorldbookUrl, syncWorldbookToST,
+  exportWorldbookUrl, syncWorldbookToST, createWorldbook,
 } from "../services/api";
 
 const props = defineProps<{
@@ -238,6 +265,7 @@ const emit = defineEmits<{
   (e: "dirty", isDirty: boolean): void;
   (e: "status", message: string, type?: "success" | "error" | "info"): void;
   (e: "copy-to-other", uids: number[]): void;
+  (e: "refresh-worldbooks"): void;
 }>();
 
 // ─────── 状态 ───────
@@ -269,6 +297,12 @@ const footerExpanded = ref(
 
 // 世界书列表搜索
 const wbSearchQuery = ref("");
+
+// 新建世界书弹窗
+const showCreateDialog = ref(false);
+const newWbName        = ref("");
+const creating         = ref(false);
+const newWbInputRef    = ref<HTMLInputElement | null>(null);
 
 // ─────── 搜索模式定义 ───────
 const searchModes = [
@@ -347,6 +381,52 @@ async function loadWorldbook() {
     emit("status", `呜喵加载失败了：${(e as Error).message} 😿`, "error");
   }
   loading.value = false;
+}
+
+// ─────── 新建世界书 ───────
+function openCreateDialog() {
+  newWbName.value = "";
+  showCreateDialog.value = true;
+  nextTick(() => newWbInputRef.value?.focus());
+}
+
+function cancelCreate() {
+  showCreateDialog.value = false;
+  newWbName.value = "";
+}
+
+async function doCreateWorldbook() {
+  const name = newWbName.value.trim();
+  if (!name || creating.value) return;
+  creating.value = true;
+  try {
+    const res = await createWorldbook(name);
+    if (!res.success) {
+      emit("status", `呜喵新建失败：${res.message} 😿`, "error");
+      creating.value = false;
+      return;
+    }
+    showCreateDialog.value = false;
+    newWbName.value = "";
+    // 通知 App.vue 刷新世界书列表
+    emit("refresh-worldbooks");
+    // 尝试同步到 ST 运行时内存（新建后立即通知）
+    await syncWorldbookToST(name, []);
+    // 刷新完成后自动选中新建的世界书
+    await nextTick();
+    selectedWorldbook.value = name;
+    await loadWorldbook();
+    emit(
+      "status",
+      res.data?.created
+        ? `喵~已新建世界书「${name}」~ 📖`
+        : `喵~已覆盖世界书「${name}」~ 📖`,
+      "success"
+    );
+  } catch (e) {
+    emit("status", `呜喵新建出错了：${(e as Error).message} 😿`, "error");
+  }
+  creating.value = false;
 }
 
 // ─────── 保存（供 App.vue 调用） ───────
@@ -510,7 +590,11 @@ async function batchCreate() {
   if (res.success && res.data) {
     await loadWorldbook();
     markDirty();
-    emit("status", `喵~已创建 ${count} 条空白条目啦！记得保存哦~ ✨`, "success");
+    // 同步到 ST 运行时内存
+    if (selectedWorldbook.value) {
+      await syncWorldbookToST(selectedWorldbook.value, localEntries.value);
+    }
+    emit("status", `喵~已创建 ${count} 条空白条目啦！已同步到酒馆~ ✨`, "success");
   } else {
     emit("status", `呜喵批量创建失败了：${res.message} 😿`, "error");
   }
