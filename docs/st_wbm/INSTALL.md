@@ -1,16 +1,16 @@
 # 安装指南
 
-  ## 系统要求
+## 系统要求
 
-  - SillyTavern（最新版）
-  - Node.js 18+（SillyTavern 自带）
-  - Python 3.10+（仅使用 Python CLI 时需要）
+- SillyTavern（最新版）
+- Node.js 18+（SillyTavern 自带）
+- Python 3.10+（仅使用 Python CLI 时需要）
 
   ---
 
-  ## 目录结构
+## 目录结构
 
-  ```
+  ```bash
   WorldBookManager/
   ├── ST-WBM-UI/                  ← 前端扩展（安装到 ST extensions）
   │   ├── manifest.json
@@ -29,9 +29,9 @@
 
   ---
 
-  ## 步骤一：安装后端插件
+## 步骤一：安装后端插件
 
-  ### 1.1 从独立仓库克隆（推荐）
+### 1.1 从独立仓库克隆（推荐）
 
   ```bash
   cd /path/to/SillyTavern/plugins
@@ -41,13 +41,13 @@
   > **注意**：目录名必须为 `wb-manager`（插件路由前缀为 `/api/plugins/wb-manager/`）  
   > `dist/` 已包含编译后的 JavaScript，**无需执行 `npm install`**。
 
-  ### 1.1（备用）从主仓库复制
+### 1.1（备用）从主仓库复制
 
   ```bash
   cp -r server/ST-WBM-Server /path/to/SillyTavern/plugins/wb-manager
   ```
 
-  ### 1.2 验证安装
+### 1.2 验证安装
 
   启动 SillyTavern 后，访问：
 
@@ -59,32 +59,33 @@
 
   ---
 
-  ## 步骤二：安装前端扩展
+## 步骤二：安装前端扩展
 
-  ### 2.1 从独立仓库克隆（推荐）
+### 2.1 从独立仓库克隆（推荐）
 
   ```bash
   cd /path/to/ST数据目录/extensions/third-party
   git clone https://github.com/AliceSao/ST-WBM-UI.git ST-WBM-UI
   ```
 
-  ### 2.1（备用）从主仓库复制
+### 2.1（备用）从主仓库复制
 
   ```bash
   # ST 数据目录通常为 SillyTavern/data/default-user/
   cp -r ST-WBM-UI /path/to/ST数据目录/extensions/third-party/ST-WBM-UI
   ```
 
-  ### 2.2 启用扩展
+### 2.2 启用扩展
 
   在 SillyTavern 中：
+
   1. 点击顶部 **扩展（Extensions）** 图标
   2. 找到 **WorldBook Manager**
   3. 勾选启用
 
   ---
 
-  ## 数据路径配置
+## 数据路径配置
 
   后端默认从以下路径读写世界书文件：
 
@@ -96,7 +97,7 @@
 
   ---
 
-  ## 从源码构建（可选）
+## 从源码构建（可选）
 
   如需修改源码后重新构建：
 
