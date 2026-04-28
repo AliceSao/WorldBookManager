@@ -245,7 +245,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, reactive, nextTick } from "vue";
+import { ref, computed, reactive, nextTick, onMounted, onUnmounted } from "vue";
 import EntryEditor from "./EntryEditor.vue";
 import BatchMenu from "./BatchMenu.vue";
 import type { RawEntry } from "../utils/worldbook";
@@ -253,6 +253,8 @@ import { strategyLabel, positionLabel, cloneEntries, createBlankEntry } from "..
 import {
   getWorldbook, saveWorldbook, deleteEntries, addEntries,
   exportWorldbookUrl, syncWorldbookToST, createWorldbook,
+  onWorldbookUpdate, offWorldbookUpdate,
+  type SseCallback,
 } from "../services/api";
 
 const props = defineProps<{
@@ -382,6 +384,22 @@ async function loadWorldbook() {
   }
   loading.value = false;
 }
+
+// ─────── SSE 实时同步：后端变更时自动刷新 ───────
+const sseHandler: SseCallback = (data) => {
+  // 仅当当前面板正在查看被更新的世界书时才刷新
+  if (data.name && data.name === selectedWorldbook.value && !isDirty.value) {
+    loadWorldbook();
+  }
+};
+
+onMounted(() => {
+  onWorldbookUpdate(sseHandler);
+});
+
+onUnmounted(() => {
+  offWorldbookUpdate(sseHandler);
+});
 
 // ─────── 新建世界书 ───────
 function openCreateDialog() {

@@ -8,12 +8,7 @@
  */
 import { readWorldbook, writeWorldbook, } from "../services/worldbook.js";
 import { searchEntries, addEntries, removeEntries, updateEntry, } from "../services/entry.js";
-function ok(res, message, data) {
-    res.json({ success: true, message, data: data ?? null });
-}
-function fail(res, message, status = 400) {
-    res.status(status).json({ success: false, message, data: null });
-}
+import { ok, fail, safeErrorMessage } from "../utils/response.js";
 export function registerEntryRoutes(router) {
     // ────────────────────────────────────────────────────────────────────────
     // GET /worldbooks/:name/entries?q=<query>&user=<username>
@@ -34,7 +29,7 @@ export function registerEntryRoutes(router) {
             });
         }
         catch (e) {
-            fail(res, `读取条目失败：${e.message}`, 500);
+            fail(res, safeErrorMessage(e, "读取条目失败"), 500);
         }
     });
     // ────────────────────────────────────────────────────────────────────────
@@ -58,7 +53,7 @@ export function registerEntryRoutes(router) {
             });
         }
         catch (e) {
-            fail(res, `添加条目失败：${e.message}`, 500);
+            fail(res, safeErrorMessage(e, "添加条目失败"), 500);
         }
     });
     // ────────────────────────────────────────────────────────────────────────
@@ -80,7 +75,7 @@ export function registerEntryRoutes(router) {
             ok(res, `已更新条目 uid=${uid}（"${updated.comment}"）`, { entry: updated });
         }
         catch (e) {
-            fail(res, `更新条目失败：${e.message}`, 500);
+            fail(res, safeErrorMessage(e, "更新条目失败"), 500);
         }
     });
     // ────────────────────────────────────────────────────────────────────────
@@ -105,7 +100,7 @@ export function registerEntryRoutes(router) {
             });
         }
         catch (e) {
-            fail(res, `删除条目失败：${e.message}`, 500);
+            fail(res, safeErrorMessage(e, "删除条目失败"), 500);
         }
     });
 }

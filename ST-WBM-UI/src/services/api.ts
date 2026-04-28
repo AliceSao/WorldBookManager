@@ -252,3 +252,59 @@ export async function getSTCharacters(): Promise<string[]> {
 export async function ping() {
   return request<{ version: string }>("GET", "/ping");
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SSE（Server-Sent Events）实时同步
+// ─────────────────────────────────────────────────────────────────────────────
+
+export type SseCallback = (data: { name: string; user: string; count: number; timestamp: number }) => void;
+
+let _sseSource: EventSource | null = null;
+const _sseListeners: Set<SseCallback> = new Set();
+
+/**
+ * 连接 SSE 端点。多次调用只会建立一个连接。
+ * 当后端世界书被写入时，所有注册的 listener 会被调用。
+ */
+export function connectSse(): void {
+  if (_sseSource) return;
+  _sseSource = new EventSource(`${BASE}/events`);
+
+  _sseSource.addEventListener("worldbook-updated", (ev) => {
+    try {
+      const data = JSON.parse(ev.data);
+      for (const cb of _sseListeners) {
+        try { cb(data); } catch { /* listener error, ignore */ }
+      }
+    } catch { /* parse error, ignore */ }
+  });
+
+  _sseSource.onerror = () => {
+    // 连接断开后自动重连（EventSource 内置重连机制）
+    // 如果完全关闭则清理
+    if (_sseSource?.readyState === EventSource.CLOSED) {
+      _sseSource = null;
+    }
+  };
+}
+
+/** 注册一个世界书变更回调 */
+export function onWorldbookUpdate(cb: SseCallback): void {
+  _sseListeners.add(cb);
+  // 确保 SSE 已连接
+  connectSse();
+}
+
+/** 注销一个世界书变更回调 */
+export function offWorldbookUpdate(cb: SseCallback): void {
+  _sseListeners.delete(cb);
+}
+
+/** 断开 SSE 连接 */
+export function disconnectSse(): void {
+  if (_sseSource) {
+    _sseSource.close();
+    _sseSource = null;
+  }
+  _sseListeners.clear();
+}

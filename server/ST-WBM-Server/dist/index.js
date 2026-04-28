@@ -15,10 +15,10 @@ import { registerWebRoutes } from "./routes/web.js";
 export const info = {
     id: "wb-manager",
     name: "WorldBook Manager",
-    description: "ST-WBM-Server v1.0：双面板世界书管理器，直接读写世界书 JSON，支持批量操作。",
+    description: "ST-WBM-Server v1.1.0：双面板世界书管理器，直接读写世界书 JSON，支持批量操作。",
 };
 export async function init(router) {
-    console.log("[wb-manager] ST-WBM-Server v1.0 正在加载...");
+    console.log("[wb-manager] ST-WBM-Server v1.1.0 正在加载...");
     registerWorldbookRoutes(router);
     console.log("[wb-manager] 世界书路由已注册");
     registerEntryRoutes(router);

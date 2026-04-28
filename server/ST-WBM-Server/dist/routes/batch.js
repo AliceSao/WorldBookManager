@@ -20,12 +20,7 @@
 import { readWorldbook, writeWorldbook } from "../services/worldbook.js";
 import { addEntries } from "../services/entry.js";
 import { batchSetStrategy, batchSetPosition, batchSetDepth, batchSetOrder, batchSetName, batchSetProbability, batchSetKeys, batchAddKeys, batchClearKeys, batchReplaceKey, batchSetRecursion, batchSetEffect, batchSetGroupWeight, batchSetCharacterFilter, batchSetEnabled, batchOffsetUids, batchSetUidsSequential, } from "../services/batch.js";
-function ok(res, message, data) {
-    res.json({ success: true, message, data: data ?? null });
-}
-function fail(res, message, status = 400) {
-    res.status(status).json({ success: false, message, data: null });
-}
+import { ok, fail, safeErrorMessage } from "../utils/response.js";
 async function withBatch(res, name, user, uids, fn, successMsg) {
     if (!Array.isArray(uids) || uids.length === 0) {
         return fail(res, "参数错误：uids 必须是非空整数数组");
@@ -51,7 +46,7 @@ export function registerBatchRoutes(router) {
             await withBatch(res, name, user, uids, (e, u) => batchSetStrategy(e, u, strategy), `已更新 ${uids?.length} 条条目的激活策略为 "${strategy}"`);
         }
         catch (e) {
-            fail(res, e.message, 500);
+            fail(res, safeErrorMessage(e, "批量操作失败"), 500);
         }
     });
     // ──────────────── 插入位置 ────────────────
@@ -65,7 +60,7 @@ export function registerBatchRoutes(router) {
             await withBatch(res, name, user, uids, (e, u) => batchSetPosition(e, u, position), `已更新 ${uids?.length} 条条目的插入位置为 ${position}`);
         }
         catch (e) {
-            fail(res, e.message, 500);
+            fail(res, safeErrorMessage(e, "批量操作失败"), 500);
         }
     });
     // ──────────────── 深度 ────────────────
@@ -78,7 +73,7 @@ export function registerBatchRoutes(router) {
             await withBatch(res, name, user, uids, (e, u) => batchSetDepth(e, u, depth), `已更新 ${uids?.length} 条条目的深度为 ${depth}`);
         }
         catch (e) {
-            fail(res, e.message, 500);
+            fail(res, safeErrorMessage(e, "批量操作失败"), 500);
         }
     });
     // ──────────────── Order ────────────────
@@ -91,7 +86,7 @@ export function registerBatchRoutes(router) {
             await withBatch(res, name, user, uids, (e, u) => batchSetOrder(e, u, order), `已更新 ${uids?.length} 条条目的 Order 为 ${order}`);
         }
         catch (e) {
-            fail(res, e.message, 500);
+            fail(res, safeErrorMessage(e, "批量操作失败"), 500);
         }
     });
     // ──────────────── 标题 ────────────────
@@ -104,7 +99,7 @@ export function registerBatchRoutes(router) {
             await withBatch(res, name, user, uids, (e, u) => batchSetName(e, u, title), `已更新 ${uids?.length} 条条目的标题为 "${title}"`);
         }
         catch (e) {
-            fail(res, e.message, 500);
+            fail(res, safeErrorMessage(e, "批量操作失败"), 500);
         }
     });
     // ──────────────── 触发概率 ────────────────
@@ -118,7 +113,7 @@ export function registerBatchRoutes(router) {
             await withBatch(res, name, user, uids, (e, u) => batchSetProbability(e, u, probability), `已更新 ${uids?.length} 条条目的触发概率为 ${probability}%`);
         }
         catch (e) {
-            fail(res, e.message, 500);
+            fail(res, safeErrorMessage(e, "批量操作失败"), 500);
         }
     });
     // ──────────────── 关键字：替换 ────────────────
@@ -131,7 +126,7 @@ export function registerBatchRoutes(router) {
             await withBatch(res, name, user, uids, (e, u) => batchSetKeys(e, u, keys), `已替换 ${uids?.length} 条条目的主要关键字`);
         }
         catch (e) {
-            fail(res, e.message, 500);
+            fail(res, safeErrorMessage(e, "批量操作失败"), 500);
         }
     });
     // ──────────────── 关键字：添加 ────────────────
@@ -144,7 +139,7 @@ export function registerBatchRoutes(router) {
             await withBatch(res, name, user, uids, (e, u) => batchAddKeys(e, u, keys), `已向 ${uids?.length} 条条目添加 ${keys.length} 个关键字`);
         }
         catch (e) {
-            fail(res, e.message, 500);
+            fail(res, safeErrorMessage(e, "批量操作失败"), 500);
         }
     });
     // ──────────────── 关键字：清空 ────────────────
@@ -155,7 +150,7 @@ export function registerBatchRoutes(router) {
             await withBatch(res, name, user, uids, (e, u) => batchClearKeys(e, u), `已清空 ${uids?.length} 条条目的主要关键字`);
         }
         catch (e) {
-            fail(res, e.message, 500);
+            fail(res, safeErrorMessage(e, "批量操作失败"), 500);
         }
     });
     // ──────────────── 递归控制 ────────────────
@@ -166,7 +161,7 @@ export function registerBatchRoutes(router) {
             await withBatch(res, name, user, uids, (e, u) => batchSetRecursion(e, u, { excludeRecursion, preventRecursion, delayUntilRecursion }), `已更新 ${uids?.length} 条条目的递归控制`);
         }
         catch (e) {
-            fail(res, e.message, 500);
+            fail(res, safeErrorMessage(e, "批量操作失败"), 500);
         }
     });
     // ──────────────── 效果（粘性/冷却/延迟） ────────────────
@@ -177,7 +172,7 @@ export function registerBatchRoutes(router) {
             await withBatch(res, name, user, uids, (e, u) => batchSetEffect(e, u, { sticky, cooldown, delay }), `已更新 ${uids?.length} 条条目的效果设置`);
         }
         catch (e) {
-            fail(res, e.message, 500);
+            fail(res, safeErrorMessage(e, "批量操作失败"), 500);
         }
     });
     // ──────────────── 组权重 ────────────────
@@ -190,7 +185,7 @@ export function registerBatchRoutes(router) {
             await withBatch(res, name, user, uids, (e, u) => batchSetGroupWeight(e, u, groupWeight), `已更新 ${uids?.length} 条条目的组权重为 ${groupWeight}`);
         }
         catch (e) {
-            fail(res, e.message, 500);
+            fail(res, safeErrorMessage(e, "批量操作失败"), 500);
         }
     });
     // ──────────────── 角色/标签绑定 ────────────────
@@ -201,7 +196,7 @@ export function registerBatchRoutes(router) {
             await withBatch(res, name, user, uids, (e, u) => batchSetCharacterFilter(e, u, filter ?? null), `已更新 ${uids?.length} 条条目的角色绑定`);
         }
         catch (e) {
-            fail(res, e.message, 500);
+            fail(res, safeErrorMessage(e, "批量操作失败"), 500);
         }
     });
     // ──────────────── 关键字：查找替换 ────────────────
@@ -216,7 +211,7 @@ export function registerBatchRoutes(router) {
                 : `已从 ${uids?.length} 条条目中删除关键字 "${findKey}"`);
         }
         catch (e) {
-            fail(res, e.message, 500);
+            fail(res, safeErrorMessage(e, "批量操作失败"), 500);
         }
     });
     // ──────────────── UID 顺序设定 ────────────────
@@ -238,7 +233,7 @@ export function registerBatchRoutes(router) {
             });
         }
         catch (e) {
-            fail(res, e.message, 500);
+            fail(res, safeErrorMessage(e, "批量操作失败"), 500);
         }
     });
     // ──────────────── UID 偏移 ────────────────
@@ -272,7 +267,7 @@ export function registerBatchRoutes(router) {
             });
         }
         catch (e) {
-            fail(res, e.message, 500);
+            fail(res, safeErrorMessage(e, "批量操作失败"), 500);
         }
     });
     // ──────────────── 启用/禁用 ────────────────
@@ -285,7 +280,7 @@ export function registerBatchRoutes(router) {
             await withBatch(res, name, user, uids, (e, u) => batchSetEnabled(e, u, enabled), `已${enabled ? "启用" : "禁用"} ${uids?.length} 条条目`);
         }
         catch (e) {
-            fail(res, e.message, 500);
+            fail(res, safeErrorMessage(e, "批量操作失败"), 500);
         }
     });
     // ──────────────── 跨世界书复制 ────────────────
@@ -313,7 +308,7 @@ export function registerBatchRoutes(router) {
             });
         }
         catch (e) {
-            fail(res, `复制条目失败：${e.message}`, 500);
+            fail(res, safeErrorMessage(e, "复制条目失败"), 500);
         }
     });
 }

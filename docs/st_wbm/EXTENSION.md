@@ -9,27 +9,28 @@ ST-WBM-UI 扩展在 SillyTavern 中注入入口面板，通过 iframe 弹窗打�
 
 ## 扩展功能
 
-- **入口面板注入**：在 SillyTavern 扩展面板中显示 WorldBook Manager 入口
+- **入口面板注入**：在 SillyTavern 扩展面板中显示 WorldBosok Manager 入口
 - **iframe 弹窗**：点击「📖 打开管理面板」按钮，以 iframe modal 方式打开双面板 Web UI
 - **后端状态显示**：面板中显示后端连接状态
 
-  ***
+  ---
 
   ## 依赖
 
 - **ST-WBM-Server** 后端插件（必须已安装并运行）
 - 无其他扩展依赖
 
-  ***
+  ---
 
   ## 使用方式
+
   1. 在 SillyTavern → 扩展 → 启用 **WorldBook Manager**
   2. 扩展面板中出现 WorldBook Manager 入口
   3. 点击 **📖 打开管理面板** 打开双面板 Web UI
 
   或直接在浏览器中访问：`http://localhost:8000/api/plugins/wb-manager/ui/`
 
-  ***
+  ---
 
   ## 相关文档
 

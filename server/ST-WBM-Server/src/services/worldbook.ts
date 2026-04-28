@@ -68,9 +68,29 @@ export function getWorldsDir(user = "default-user"): string {
   return path.join(getStRoot(), "data", user, "worlds");
 }
 
-/** 获取某个世界书 JSON 的路径 */
+/**
+ * 校验名称安全性（防止路径穿越）
+ * 拒绝包含路径分隔符、..、或其他危险字符的输入
+ */
+function validateName(name: string, label = "name"): void {
+  if (!name || typeof name !== "string") {
+    throw new Error(`${label} 不能为空`);
+  }
+  if (/[\/\\]/.test(name) || name.includes("..")) {
+    throw new Error(`${label} 包含非法字符`);
+  }
+}
+
+/** 获取某个世界书 JSON 的路径（含路径穿越防护） */
 export function getWorldbookPath(name: string, user = "default-user"): string {
-  return path.join(getWorldsDir(user), `${name}.json`);
+  validateName(name, "世界书名称");
+  validateName(user, "用户名");
+  const resolved = path.resolve(getWorldsDir(user), `${name}.json`);
+  const worldsDir = path.resolve(getWorldsDir(user));
+  if (!resolved.startsWith(worldsDir + path.sep) && resolved !== worldsDir) {
+    throw new Error("路径安全检查失败");
+  }
+  return resolved;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -101,8 +121,9 @@ export function normalizeEntry(raw: Partial<RawEntry>, uid: number): RawEntry {
     displayIndex: raw.displayIndex ?? uid,
     comment: raw.comment ?? "",
     disable: raw.disable ?? false,
+    // 保证三个策略字段互斥：constant 优先，其次 vectorized，默认 selective
     constant: raw.constant ?? false,
-    selective: raw.selective ?? true,
+    selective: raw.constant ? false : (raw.vectorized ? false : (raw.selective ?? true)),
     key: Array.isArray(raw.key) ? raw.key : [],
     selectiveLogic: (raw.selectiveLogic as 0 | 1 | 2 | 3) ?? 0,
     keysecondary: Array.isArray(raw.keysecondary) ? raw.keysecondary : [],
@@ -147,6 +168,33 @@ export async function readWorldbook(name: string, user = "default-user"): Promis
     .map((e, i) => normalizeEntry(e, e.uid ?? i));
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// SSE（Server-Sent Events）通知管理
+// ─────────────────────────────────────────────────────────────────────────────
+
+import type { Response as ExpressResponse } from "express";
+
+const sseClients: Set<ExpressResponse> = new Set();
+
+/** 注册一个 SSE 客户端 */
+export function addSseClient(res: ExpressResponse): void {
+  sseClients.add(res);
+  res.on("close", () => sseClients.delete(res));
+}
+
+/** 向所有 SSE 客户端广播事件 */
+function broadcastSse(event: string, data: Record<string, unknown>): void {
+  const payload = `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
+  for (const client of sseClients) {
+    try { client.write(payload); } catch { sseClients.delete(client); }
+  }
+}
+
+/** 获取当前 SSE 客户端数量 */
+export function getSseClientCount(): number {
+  return sseClients.size;
+}
+
 /** 将条目数组写回世界书 JSON 文件 */
 export async function writeWorldbook(
   name: string,
@@ -161,6 +209,8 @@ export async function writeWorldbook(
   });
   const json: RawWorldbook = { entries: entriesObj };
   await fs.writeFile(filePath, JSON.stringify(json, null, 2), "utf-8");
+  // 写入完成后通知所有 SSE 客户端
+  broadcastSse("worldbook-updated", { name, user, count: entries.length, timestamp: Date.now() });
 }
 
 /** 创建新世界书（若已存在则覆盖） */

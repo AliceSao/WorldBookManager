@@ -71,7 +71,9 @@ export function updateEntry(entries, uid, updates) {
     const entry = findByUid(entries, uid);
     if (!entry)
         return null;
-    Object.assign(entry, updates);
+    // 禁止通过 update 篡改 uid 和 displayIndex，防止数据污染
+    const { uid: _uid, displayIndex: _di, ...safeUpdates } = updates;
+    Object.assign(entry, safeUpdates);
     return entry;
 }
 /**

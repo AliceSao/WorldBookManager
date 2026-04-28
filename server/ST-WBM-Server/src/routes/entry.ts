@@ -19,14 +19,7 @@ import {
   removeEntries,
   updateEntry,
 } from "../services/entry.js";
-
-function ok(res: Response, message: string, data?: unknown) {
-  res.json({ success: true, message, data: data ?? null });
-}
-
-function fail(res: Response, message: string, status = 400) {
-  res.status(status).json({ success: false, message, data: null });
-}
+import { ok, fail, safeErrorMessage } from "../utils/response.js";
 
 export function registerEntryRoutes(router: Router): void {
   // ────────────────────────────────────────────────────────────────────────
@@ -47,7 +40,7 @@ export function registerEntryRoutes(router: Router): void {
         query: q,
       });
     } catch (e: unknown) {
-      fail(res, `读取条目失败：${(e as Error).message}`, 500);
+      fail(res, safeErrorMessage(e, "读取条目失败"), 500);
     }
   });
 
@@ -74,7 +67,7 @@ export function registerEntryRoutes(router: Router): void {
         count: newEntries.length,
       });
     } catch (e: unknown) {
-      fail(res, `添加条目失败：${(e as Error).message}`, 500);
+      fail(res, safeErrorMessage(e, "添加条目失败"), 500);
     }
   });
 
@@ -96,7 +89,7 @@ export function registerEntryRoutes(router: Router): void {
       await writeWorldbook(name, entries, user);
       ok(res, `已更新条目 uid=${uid}（"${updated.comment}"）`, { entry: updated });
     } catch (e: unknown) {
-      fail(res, `更新条目失败：${(e as Error).message}`, 500);
+      fail(res, safeErrorMessage(e, "更新条目失败"), 500);
     }
   });
 
@@ -124,7 +117,7 @@ export function registerEntryRoutes(router: Router): void {
         remaining: entries.length,
       });
     } catch (e: unknown) {
-      fail(res, `删除条目失败：${(e as Error).message}`, 500);
+      fail(res, safeErrorMessage(e, "删除条目失败"), 500);
     }
   });
 }

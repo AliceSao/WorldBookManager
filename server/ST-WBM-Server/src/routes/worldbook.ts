@@ -20,15 +20,9 @@ import {
   deleteWorldbook,
   worldbookExists,
   RawEntry,
+  addSseClient,
 } from "../services/worldbook.js";
-
-function ok(res: Response, message: string, data?: unknown) {
-  res.json({ success: true, message, data: data ?? null });
-}
-
-function fail(res: Response, message: string, status = 400) {
-  res.status(status).json({ success: false, message, data: null });
-}
+import { ok, fail, safeErrorMessage } from "../utils/response.js";
 
 export function registerWorldbookRoutes(router: Router): void {
   // ────────────────────────────────────────────────────────────────────────
@@ -36,6 +30,18 @@ export function registerWorldbookRoutes(router: Router): void {
   // ────────────────────────────────────────────────────────────────────────
   router.get("/ping", (_req: Request, res: Response) => {
     ok(res, "ST-WBM-Server v1.0 运行正常", { version: "1.0.0" });
+  });
+
+  // ── SSE 端点 ──
+  router.get("/events", (req: Request, res: Response) => {
+    res.writeHead(200, {
+      "Content-Type": "text/event-stream",
+      "Cache-Control": "no-cache",
+      Connection: "keep-alive",
+      "X-Accel-Buffering": "no",
+    });
+    res.write("event: connected\ndata: {\"message\":\"SSE connected\"}\n\n");
+    addSseClient(res);
   });
 
   // ────────────────────────────────────────────────────────────────────────
@@ -62,7 +68,7 @@ export function registerWorldbookRoutes(router: Router): void {
       const names = await listWorldbooks(user);
       ok(res, `找到 ${names.length} 个世界书`, { worldbooks: names, user });
     } catch (e: unknown) {
-      fail(res, `列出世界书失败：${(e as Error).message}`, 500);
+      fail(res, `列出世界书失败：${safeErrorMessage(e, "列出世界书失败")}`, 500);
     }
   });
 
@@ -80,7 +86,7 @@ export function registerWorldbookRoutes(router: Router): void {
         count: entries.length,
       });
     } catch (e: unknown) {
-      fail(res, `读取世界书失败：${(e as Error).message}`, 500);
+      fail(res, safeErrorMessage(e, "读取世界书失败"), 500);
     }
   });
 
@@ -104,7 +110,7 @@ export function registerWorldbookRoutes(router: Router): void {
         count: entries.length,
       });
     } catch (e: unknown) {
-      fail(res, `保存世界书失败：${(e as Error).message}`, 500);
+      fail(res, safeErrorMessage(e, "保存世界书失败"), 500);
     }
   });
 
@@ -131,7 +137,7 @@ export function registerWorldbookRoutes(router: Router): void {
         { name, created }
       );
     } catch (e: unknown) {
-      fail(res, `创建世界书失败：${(e as Error).message}`, 500);
+      fail(res, safeErrorMessage(e, "创建世界书失败"), 500);
     }
   });
 
@@ -149,7 +155,7 @@ export function registerWorldbookRoutes(router: Router): void {
         fail(res, `世界书 "${name}" 不存在或删除失败`, 404);
       }
     } catch (e: unknown) {
-      fail(res, `删除世界书失败：${(e as Error).message}`, 500);
+      fail(res, safeErrorMessage(e, "删除世界书失败"), 500);
     }
   });
 
@@ -174,7 +180,7 @@ export function registerWorldbookRoutes(router: Router): void {
       );
       res.json(json);
     } catch (e: unknown) {
-      fail(res, `导出世界书失败：${(e as Error).message}`, 500);
+      fail(res, safeErrorMessage(e, "导出世界书失败"), 500);
     }
   });
 
@@ -199,7 +205,7 @@ export function registerWorldbookRoutes(router: Router): void {
         count: entries.length,
       });
     } catch (e: unknown) {
-      fail(res, `导入世界书失败：${(e as Error).message}`, 500);
+      fail(res, safeErrorMessage(e, "导入世界书失败"), 500);
     }
   });
 }

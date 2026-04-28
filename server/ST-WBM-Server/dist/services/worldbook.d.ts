@@ -52,7 +52,7 @@ export interface RawWorldbook {
 export declare function getStRoot(): string;
 /** 获取世界书目录路径 */
 export declare function getWorldsDir(user?: string): string;
-/** 获取某个世界书 JSON 的路径 */
+/** 获取某个世界书 JSON 的路径（含路径穿越防护） */
 export declare function getWorldbookPath(name: string, user?: string): string;
 /** 列出所有世界书名称 */
 export declare function listWorldbooks(user?: string): Promise<string[]>;
@@ -63,6 +63,11 @@ export declare function listWorldbooks(user?: string): Promise<string[]>;
 export declare function normalizeEntry(raw: Partial<RawEntry>, uid: number): RawEntry;
 /** 读取世界书（返回条目数组，保留原始字段，补全缺失字段） */
 export declare function readWorldbook(name: string, user?: string): Promise<RawEntry[]>;
+import type { Response as ExpressResponse } from "express";
+/** 注册一个 SSE 客户端 */
+export declare function addSseClient(res: ExpressResponse): void;
+/** 获取当前 SSE 客户端数量 */
+export declare function getSseClientCount(): number;
 /** 将条目数组写回世界书 JSON 文件 */
 export declare function writeWorldbook(name: string, entries: RawEntry[], user?: string): Promise<void>;
 /** 创建新世界书（若已存在则覆盖） */

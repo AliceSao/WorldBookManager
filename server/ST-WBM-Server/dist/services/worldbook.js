@@ -17,9 +17,28 @@ export function getStRoot() {
 export function getWorldsDir(user = "default-user") {
     return path.join(getStRoot(), "data", user, "worlds");
 }
-/** 获取某个世界书 JSON 的路径 */
+/**
+ * 校验名称安全性（防止路径穿越）
+ * 拒绝包含路径分隔符、..、或其他危险字符的输入
+ */
+function validateName(name, label = "name") {
+    if (!name || typeof name !== "string") {
+        throw new Error(`${label} 不能为空`);
+    }
+    if (/[\/\\]/.test(name) || name.includes("..")) {
+        throw new Error(`${label} 包含非法字符`);
+    }
+}
+/** 获取某个世界书 JSON 的路径（含路径穿越防护） */
 export function getWorldbookPath(name, user = "default-user") {
-    return path.join(getWorldsDir(user), `${name}.json`);
+    validateName(name, "世界书名称");
+    validateName(user, "用户名");
+    const resolved = path.resolve(getWorldsDir(user), `${name}.json`);
+    const worldsDir = path.resolve(getWorldsDir(user));
+    if (!resolved.startsWith(worldsDir + path.sep) && resolved !== worldsDir) {
+        throw new Error("路径安全检查失败");
+    }
+    return resolved;
 }
 // ─────────────────────────────────────────────────────────────────────────────
 // 核心读写操作
@@ -48,8 +67,9 @@ export function normalizeEntry(raw, uid) {
         displayIndex: raw.displayIndex ?? uid,
         comment: raw.comment ?? "",
         disable: raw.disable ?? false,
+        // 保证三个策略字段互斥：constant 优先，其次 vectorized，默认 selective
         constant: raw.constant ?? false,
-        selective: raw.selective ?? true,
+        selective: raw.constant ? false : (raw.vectorized ? false : (raw.selective ?? true)),
         key: Array.isArray(raw.key) ? raw.key : [],
         selectiveLogic: raw.selectiveLogic ?? 0,
         keysecondary: Array.isArray(raw.keysecondary) ? raw.keysecondary : [],
@@ -92,6 +112,28 @@ export async function readWorldbook(name, user = "default-user") {
         .sort((a, b) => (a.uid ?? 0) - (b.uid ?? 0))
         .map((e, i) => normalizeEntry(e, e.uid ?? i));
 }
+const sseClients = new Set();
+/** 注册一个 SSE 客户端 */
+export function addSseClient(res) {
+    sseClients.add(res);
+    res.on("close", () => sseClients.delete(res));
+}
+/** 向所有 SSE 客户端广播事件 */
+function broadcastSse(event, data) {
+    const payload = `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
+    for (const client of sseClients) {
+        try {
+            client.write(payload);
+        }
+        catch {
+            sseClients.delete(client);
+        }
+    }
+}
+/** 获取当前 SSE 客户端数量 */
+export function getSseClientCount() {
+    return sseClients.size;
+}
 /** 将条目数组写回世界书 JSON 文件 */
 export async function writeWorldbook(name, entries, user = "default-user") {
     const filePath = getWorldbookPath(name, user);
@@ -102,6 +144,8 @@ export async function writeWorldbook(name, entries, user = "default-user") {
     });
     const json = { entries: entriesObj };
     await fs.writeFile(filePath, JSON.stringify(json, null, 2), "utf-8");
+    // 写入完成后通知所有 SSE 客户端
+    broadcastSse("worldbook-updated", { name, user, count: entries.length, timestamp: Date.now() });
 }
 /** 创建新世界书（若已存在则覆盖） */
 export async function createWorldbook(name, entries = [], user = "default-user") {
