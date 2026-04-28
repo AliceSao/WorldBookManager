@@ -371,7 +371,9 @@ body {
   flex-shrink: 0;
   background: var(--gradient-nav);
   min-width: 0;
-  overflow: hidden;
+  overflow: visible;
+  position: relative;
+  z-index: 10;
 }
 
 .wb-select {
@@ -595,7 +597,7 @@ body {
   border: 1px solid var(--border);
   border-radius: var(--radius);
   box-shadow: var(--shadow-deep);
-  z-index: 100;
+  z-index: 9999;
   min-width: 140px;
   display: flex;
   flex-direction: column;
