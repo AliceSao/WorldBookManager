@@ -5,185 +5,190 @@
 
 /* ─────────── 主题变量定义 ─────────── */
 
-/* 1. 🌊 深海·潮汐（Deep Ocean）— 默认 */
+/* 1. 🌊 深海·潮汐（Deep Ocean）— 默认：深蓝绿色系，如深海夜光 */
 :root,
 [data-theme="ocean"] {
-  --bg:              #0a1628;
-  --bg-secondary:    #0d1e35;
-  --surface:         #122040;
-  --surface2:        #1a3a5c;
-  --bg-card:         #0f2a4a;
-  --bg-hover:        rgba(0,188,212,0.07);
-  --accent:          #00bcd4;
-  --accent-hover:    #26c6da;
-  --danger:          #ef5350;
-  --success:         #4caf50;
-  --warning:         #ff9800;
-  --text:            #e0e8f0;
-  --text-secondary:  #a8c4d8;
-  --text-muted:      #7faecf;
-  --border:          rgba(0,188,212,0.18);
-  --radius:          6px;
-  --shadow:          0 4px 20px rgba(0,0,0,0.5);
-  --shadow-deep:     0 8px 32px rgba(0,0,0,0.65);
-  --entry-hover:     rgba(0,188,212,0.08);
-  --entry-sel:       rgba(0,188,212,0.16);
-  --entry-exp:       rgba(0,188,212,0.1);
-  --btn-bg:          rgba(0,188,212,0.1);
-  --btn-hover:       rgba(0,188,212,0.2);
-  --tag-bg:          rgba(0,188,212,0.15);
-  --scrollbar:       rgba(0,188,212,0.25);
-  --mode-active:     var(--accent);
-  --mode-text:       #0a1628;
-  --toast-success-bg: rgba(76,175,80,0.18);
-  --toast-error-bg:   rgba(239,83,80,0.18);
-  --toast-info-bg:    rgba(0,188,212,0.13);
-  --gradient-nav:    linear-gradient(135deg,#122040 0%,#1a3a5c 100%);
-  --gradient-btn:    linear-gradient(135deg,rgba(0,188,212,0.18) 0%,rgba(0,188,212,0.08) 100%);
+  --bg:              #0b1929;
+  --bg-secondary:    #0f2136;
+  --surface:         #132a42;
+  --surface2:        #1a3652;
+  --bg-card:         #112640;
+  --bg-hover:        rgba(100,210,220,0.06);
+  --accent:          #5ec4c8;
+  --accent-hover:    #7dd4d7;
+  --danger:          #e06060;
+  --success:         #6ab87a;
+  --warning:         #d4a04a;
+  --text:            #d4e4ef;
+  --text-secondary:  #9ab8cd;
+  --text-muted:      #6a92ad;
+  --border:          rgba(94,196,200,0.14);
+  --radius:          8px;
+  --shadow:          0 4px 18px rgba(0,0,0,0.35);
+  --shadow-deep:     0 8px 32px rgba(0,0,0,0.5);
+  --entry-hover:     rgba(94,196,200,0.06);
+  --entry-sel:       rgba(94,196,200,0.12);
+  --entry-exp:       rgba(94,196,200,0.08);
+  --btn-bg:          rgba(94,196,200,0.08);
+  --btn-hover:       rgba(94,196,200,0.16);
+  --tag-bg:          rgba(94,196,200,0.1);
+  --scrollbar:       rgba(94,196,200,0.2);
+  --mode-active:     #5ec4c8;
+  --mode-text:       #0b1929;
+  --toast-success-bg: rgba(106,184,122,0.14);
+  --toast-error-bg:   rgba(224,96,96,0.14);
+  --toast-info-bg:    rgba(94,196,200,0.1);
+  --gradient-nav:    linear-gradient(135deg,#132a42 0%,#1a3652 100%);
+  --gradient-btn:    linear-gradient(135deg,rgba(94,196,200,0.12) 0%,rgba(94,196,200,0.04) 100%);
+  --bg-input:        #0e1f32;
 }
 
-/* 2. 🌙 星月·长安（Starry Moon）*/
+/* 2. 🌙 星月·长安（Starry Moon）— 深紫靛色系，如盛唐月下长安 */
 [data-theme="starry"] {
-  --bg:              #0d0d1a;
-  --bg-secondary:    #101020;
-  --surface:         #16163a;
-  --surface2:        #1e1e56;
-  --bg-card:         #131330;
-  --bg-hover:        rgba(240,192,64,0.06);
-  --accent:          #f0c040;
-  --accent-hover:    #ffd740;
-  --danger:          #ef5350;
-  --success:         #66bb6a;
-  --warning:         #ff9800;
-  --text:            #e8e0f8;
-  --text-secondary:  #c0b0e8;
-  --text-muted:      #9080c0;
-  --border:          rgba(240,192,64,0.18);
-  --radius:          6px;
-  --shadow:          0 4px 24px rgba(0,0,0,0.6);
-  --shadow-deep:     0 8px 36px rgba(0,0,0,0.75);
-  --entry-hover:     rgba(240,192,64,0.07);
-  --entry-sel:       rgba(240,192,64,0.15);
-  --entry-exp:       rgba(240,192,64,0.09);
-  --btn-bg:          rgba(240,192,64,0.1);
-  --btn-hover:       rgba(240,192,64,0.2);
-  --tag-bg:          rgba(240,192,64,0.15);
-  --scrollbar:       rgba(240,192,64,0.28);
-  --mode-active:     var(--accent);
-  --mode-text:       #0d0d1a;
-  --toast-success-bg: rgba(102,187,106,0.18);
-  --toast-error-bg:   rgba(239,83,80,0.18);
-  --toast-info-bg:    rgba(240,192,64,0.13);
-  --gradient-nav:    linear-gradient(135deg,#16163a 0%,#1e1e56 100%);
-  --gradient-btn:    linear-gradient(135deg,rgba(240,192,64,0.18) 0%,rgba(240,192,64,0.06) 100%);
+  --bg:              #100e1e;
+  --bg-secondary:    #14122a;
+  --surface:         #1c1840;
+  --surface2:        #26204e;
+  --bg-card:         #181436;
+  --bg-hover:        rgba(210,180,120,0.05);
+  --accent:          #c8a86c;
+  --accent-hover:    #dbc08a;
+  --danger:          #d46060;
+  --success:         #78b47a;
+  --warning:         #d4a04a;
+  --text:            #ddd6ec;
+  --text-secondary:  #b0a4cc;
+  --text-muted:      #7e72a6;
+  --border:          rgba(200,168,108,0.12);
+  --radius:          8px;
+  --shadow:          0 4px 20px rgba(0,0,0,0.45);
+  --shadow-deep:     0 8px 36px rgba(0,0,0,0.6);
+  --entry-hover:     rgba(200,168,108,0.05);
+  --entry-sel:       rgba(200,168,108,0.11);
+  --entry-exp:       rgba(200,168,108,0.07);
+  --btn-bg:          rgba(200,168,108,0.08);
+  --btn-hover:       rgba(200,168,108,0.16);
+  --tag-bg:          rgba(200,168,108,0.1);
+  --scrollbar:       rgba(200,168,108,0.2);
+  --mode-active:     #c8a86c;
+  --mode-text:       #100e1e;
+  --toast-success-bg: rgba(120,180,122,0.14);
+  --toast-error-bg:   rgba(212,96,96,0.14);
+  --toast-info-bg:    rgba(200,168,108,0.1);
+  --gradient-nav:    linear-gradient(135deg,#1c1840 0%,#26204e 100%);
+  --gradient-btn:    linear-gradient(135deg,rgba(200,168,108,0.12) 0%,rgba(200,168,108,0.04) 100%);
+  --bg-input:        #120f24;
 }
 
-/* 3. 🌿 森林·听风（Forest）*/
+/* 3. 🌿 森林·听风（Forest Breeze）— 青绿苔色系，如竹林清风 */
 [data-theme="forest"] {
-  --bg:              #0a1a0a;
-  --bg-secondary:    #0d200d;
-  --surface:         #142814;
-  --surface2:        #1c3a1c;
-  --bg-card:         #112011;
-  --bg-hover:        rgba(102,187,106,0.06);
-  --accent:          #66bb6a;
-  --accent-hover:    #81c784;
-  --danger:          #ef5350;
-  --success:         #66bb6a;
-  --warning:         #ff9800;
-  --text:            #d8f0d0;
-  --text-secondary:  #a8d8a8;
-  --text-muted:      #6a9a6a;
-  --border:          rgba(102,187,106,0.18);
-  --radius:          6px;
-  --shadow:          0 4px 20px rgba(0,0,0,0.5);
-  --shadow-deep:     0 8px 32px rgba(0,0,0,0.65);
-  --entry-hover:     rgba(102,187,106,0.07);
-  --entry-sel:       rgba(102,187,106,0.15);
-  --entry-exp:       rgba(102,187,106,0.09);
-  --btn-bg:          rgba(102,187,106,0.1);
-  --btn-hover:       rgba(102,187,106,0.2);
-  --tag-bg:          rgba(102,187,106,0.15);
-  --scrollbar:       rgba(102,187,106,0.28);
-  --mode-active:     var(--accent);
-  --mode-text:       #0a1a0a;
-  --toast-success-bg: rgba(102,187,106,0.18);
-  --toast-error-bg:   rgba(239,83,80,0.18);
-  --toast-info-bg:    rgba(102,187,106,0.11);
-  --gradient-nav:    linear-gradient(135deg,#142814 0%,#1c3a1c 100%);
-  --gradient-btn:    linear-gradient(135deg,rgba(102,187,106,0.18) 0%,rgba(102,187,106,0.07) 100%);
+  --bg:              #0c1610;
+  --bg-secondary:    #101e14;
+  --surface:         #162a1c;
+  --surface2:        #1e3824;
+  --bg-card:         #142418;
+  --bg-hover:        rgba(120,180,110,0.05);
+  --accent:          #78b46e;
+  --accent-hover:    #92c88a;
+  --danger:          #d46060;
+  --success:         #78b46e;
+  --warning:         #c4a050;
+  --text:            #cce0cc;
+  --text-secondary:  #99be99;
+  --text-muted:      #668a66;
+  --border:          rgba(120,180,110,0.12);
+  --radius:          8px;
+  --shadow:          0 4px 18px rgba(0,0,0,0.35);
+  --shadow-deep:     0 8px 30px rgba(0,0,0,0.5);
+  --entry-hover:     rgba(120,180,110,0.05);
+  --entry-sel:       rgba(120,180,110,0.11);
+  --entry-exp:       rgba(120,180,110,0.07);
+  --btn-bg:          rgba(120,180,110,0.08);
+  --btn-hover:       rgba(120,180,110,0.16);
+  --tag-bg:          rgba(120,180,110,0.1);
+  --scrollbar:       rgba(120,180,110,0.2);
+  --mode-active:     #78b46e;
+  --mode-text:       #0c1610;
+  --toast-success-bg: rgba(120,180,110,0.14);
+  --toast-error-bg:   rgba(212,96,96,0.14);
+  --toast-info-bg:    rgba(120,180,110,0.1);
+  --gradient-nav:    linear-gradient(135deg,#162a1c 0%,#1e3824 100%);
+  --gradient-btn:    linear-gradient(135deg,rgba(120,180,110,0.12) 0%,rgba(120,180,110,0.04) 100%);
+  --bg-input:        #0e1a12;
 }
 
-/* 4. 📜 宣纸·墨韵（Rice Paper）— 浅色 */
+/* 4. 📜 宣纸·墨韵（Rice Paper Ink）— 浅色：宣纸暖白+墨色点缀 */
 [data-theme="paper"] {
-  --bg:              #f5f0e8;
-  --bg-secondary:    #f0e8d8;
-  --surface:         #ede6d6;
-  --surface2:        #e0d4be;
-  --bg-card:         #f8f4ec;
-  --bg-hover:        rgba(80,50,20,0.04);
-  --accent:          #6b4c28;
-  --accent-hover:    #4a3018;
-  --danger:          #c62828;
-  --success:         #2e7d32;
-  --warning:         #e65100;
-  --text:            #2c1e10;
-  --text-secondary:  #5a3e28;
-  --text-muted:      #8a6a50;
-  --border:          rgba(80,50,20,0.16);
-  --radius:          6px;
-  --shadow:          0 2px 12px rgba(80,40,10,0.12);
-  --shadow-deep:     0 6px 24px rgba(80,40,10,0.2);
-  --entry-hover:     rgba(80,50,20,0.04);
-  --entry-sel:       rgba(80,50,20,0.09);
-  --entry-exp:       rgba(80,50,20,0.05);
-  --btn-bg:          rgba(80,50,20,0.07);
-  --btn-hover:       rgba(80,50,20,0.14);
-  --tag-bg:          rgba(80,50,20,0.09);
-  --scrollbar:       rgba(80,50,20,0.18);
-  --mode-active:     var(--accent);
-  --mode-text:       #f5f0e8;
-  --toast-success-bg: rgba(46,125,50,0.1);
-  --toast-error-bg:   rgba(198,40,40,0.1);
-  --toast-info-bg:    rgba(80,50,20,0.07);
-  --gradient-nav:    linear-gradient(135deg,#e8dfc8 0%,#ddd0b8 100%);
-  --gradient-btn:    linear-gradient(135deg,rgba(80,50,20,0.1) 0%,rgba(80,50,20,0.04) 100%);
+  --bg:              #f4efe6;
+  --bg-secondary:    #ece5d8;
+  --surface:         #e8e0d2;
+  --surface2:        #ddd4c2;
+  --bg-card:         #f0ebe2;
+  --bg-hover:        rgba(70,48,28,0.03);
+  --accent:          #5c4028;
+  --accent-hover:    #483018;
+  --danger:          #a83232;
+  --success:         #3a7a40;
+  --warning:         #9a6a20;
+  --text:            #2a1e12;
+  --text-secondary:  #5a4232;
+  --text-muted:      #8a7060;
+  --border:          rgba(70,48,28,0.1);
+  --radius:          8px;
+  --shadow:          0 2px 12px rgba(60,40,20,0.08);
+  --shadow-deep:     0 6px 20px rgba(60,40,20,0.14);
+  --entry-hover:     rgba(70,48,28,0.03);
+  --entry-sel:       rgba(70,48,28,0.07);
+  --entry-exp:       rgba(70,48,28,0.04);
+  --btn-bg:          rgba(70,48,28,0.05);
+  --btn-hover:       rgba(70,48,28,0.1);
+  --tag-bg:          rgba(70,48,28,0.06);
+  --scrollbar:       rgba(70,48,28,0.14);
+  --mode-active:     #5c4028;
+  --mode-text:       #f4efe6;
+  --toast-success-bg: rgba(58,122,64,0.08);
+  --toast-error-bg:   rgba(168,50,50,0.08);
+  --toast-info-bg:    rgba(70,48,28,0.05);
+  --gradient-nav:    linear-gradient(135deg,#e4dbc8 0%,#d8ccb4 100%);
+  --gradient-btn:    linear-gradient(135deg,rgba(70,48,28,0.07) 0%,rgba(70,48,28,0.02) 100%);
+  --bg-input:        #ede6da;
 }
 
-/* 5. 🎀 流苏·绛唇（Tassel）— 酒红古风 */
+/* 5. 🎀 流苏·绛唇（Crimson Tassel）— 暗红绛色系，如古典绛帐红纱 */
 [data-theme="tassel"] {
-  --bg:              #180808;
-  --bg-secondary:    #1e0a0a;
-  --surface:         #2a1010;
-  --surface2:        #421818;
-  --bg-card:         #221010;
-  --bg-hover:        rgba(255,120,120,0.06);
-  --accent:          #ff7070;
-  --accent-hover:    #ff9090;
-  --danger:          #ef5350;
-  --success:         #66bb6a;
-  --warning:         #ff9800;
-  --text:            #f2e0e0;
-  --text-secondary:  #d8b8b8;
-  --text-muted:      #b08080;
-  --border:          rgba(255,120,120,0.18);
-  --radius:          6px;
-  --shadow:          0 4px 20px rgba(0,0,0,0.6);
-  --shadow-deep:     0 8px 36px rgba(0,0,0,0.75);
-  --entry-hover:     rgba(255,120,120,0.07);
-  --entry-sel:       rgba(255,120,120,0.15);
-  --entry-exp:       rgba(255,120,120,0.09);
-  --btn-bg:          rgba(255,120,120,0.1);
-  --btn-hover:       rgba(255,120,120,0.2);
-  --tag-bg:          rgba(255,120,120,0.15);
-  --scrollbar:       rgba(255,120,120,0.28);
-  --mode-active:     var(--accent);
-  --mode-text:       #180808;
-  --toast-success-bg: rgba(102,187,106,0.14);
-  --toast-error-bg:   rgba(239,83,80,0.18);
-  --toast-info-bg:    rgba(255,120,120,0.11);
-  --gradient-nav:    linear-gradient(135deg,#2a1010 0%,#421818 100%);
-  --gradient-btn:    linear-gradient(135deg,rgba(255,120,120,0.18) 0%,rgba(255,120,120,0.07) 100%);
+  --bg:              #160a0a;
+  --bg-secondary:    #1c0e0e;
+  --surface:         #261414;
+  --surface2:        #341c1c;
+  --bg-card:         #201010;
+  --bg-hover:        rgba(200,110,110,0.05);
+  --accent:          #c87878;
+  --accent-hover:    #d89898;
+  --danger:          #d46060;
+  --success:         #78a87a;
+  --warning:         #c4a050;
+  --text:            #e8d4d4;
+  --text-secondary:  #c4a4a4;
+  --text-muted:      #967878;
+  --border:          rgba(200,120,120,0.12);
+  --radius:          8px;
+  --shadow:          0 4px 18px rgba(0,0,0,0.45);
+  --shadow-deep:     0 8px 32px rgba(0,0,0,0.6);
+  --entry-hover:     rgba(200,120,120,0.05);
+  --entry-sel:       rgba(200,120,120,0.11);
+  --entry-exp:       rgba(200,120,120,0.07);
+  --btn-bg:          rgba(200,120,120,0.08);
+  --btn-hover:       rgba(200,120,120,0.16);
+  --tag-bg:          rgba(200,120,120,0.1);
+  --scrollbar:       rgba(200,120,120,0.2);
+  --mode-active:     #c87878;
+  --mode-text:       #160a0a;
+  --toast-success-bg: rgba(120,168,122,0.12);
+  --toast-error-bg:   rgba(212,96,96,0.14);
+  --toast-info-bg:    rgba(200,120,120,0.1);
+  --gradient-nav:    linear-gradient(135deg,#261414 0%,#341c1c 100%);
+  --gradient-btn:    linear-gradient(135deg,rgba(200,120,120,0.12) 0%,rgba(200,120,120,0.04) 100%);
+  --bg-input:        #180c0c;
 }
 
 /* ─────────── 主题切换过渡 ─────────── */
@@ -513,6 +518,39 @@ body {
 }
 
 .search-input:focus { outline: none; border-color: var(--accent); }
+
+/* ─────────── 排序与移动按钮 ─────────── */
+.sort-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.sort-label {
+  font-size: 10px;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.sort-select {
+  flex: 1;
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 2px 6px;
+  font-size: 11px;
+}
+
+.entry-move-btn {
+  opacity: 0.3;
+  font-size: 11px;
+  padding: 1px 2px;
+  transition: opacity 0.15s;
+}
+.entry-row:hover .entry-move-btn { opacity: 0.7; }
+.entry-move-btn:hover { opacity: 1 !important; }
 
 /* ─────────── 条目列表 ─────────── */
 .panel-entries {

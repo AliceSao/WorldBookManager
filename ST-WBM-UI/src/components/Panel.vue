@@ -35,6 +35,8 @@
         class="btn btn-sm"
         title="下载此世界书 JSON 文件"
       >📤</a>
+      <button v-if="selectedWorldbook" class="btn btn-sm" @click="renameWorldbook" title="重命名世界书">✏️</button>
+      <button v-if="selectedWorldbook" class="btn btn-sm" @click="confirmDeleteWorldbook" title="删除世界书">🗑️</button>
     </div>
 
     <!-- 搜索栏（含模式切换） -->
@@ -55,6 +57,18 @@
           :placeholder="searchPlaceholder"
         />
         <button v-if="searchQuery" class="btn btn-sm" @click="searchQuery = ''">✕</button>
+      </div>
+      <div class="sort-row">
+        <label class="sort-label">排序：</label>
+        <select v-model="sortMode" class="sort-select" @change="applySortMode">
+          <option value="uid-asc">UID ↑</option>
+          <option value="uid-desc">UID ↓</option>
+          <option value="order-asc">Order ↑</option>
+          <option value="order-desc">Order ↓</option>
+          <option value="name-asc">标题 A→Z</option>
+          <option value="name-desc">标题 Z→A</option>
+          <option value="strategy">策略分组</option>
+        </select>
       </div>
     </div>
 
@@ -117,6 +131,8 @@
             </span>
             <span class="entry-meta">{{ positionShort(entry) }}</span>
             <button class="btn btn-icon entry-del-btn" @click.stop="quickDeleteEntry(entry.uid)" title="快捷删除">🗑️</button>
+            <button class="btn btn-icon entry-move-btn" @click.stop="moveEntry(entry.uid, -1)" title="上移">⬆</button>
+            <button class="btn btn-icon entry-move-btn" @click.stop="moveEntry(entry.uid, 1)" title="下移">⬇</button>
             <button class="btn btn-icon" @click.stop="toggleExpand(entry.uid)" title="编辑">
               {{ expandedUid === entry.uid ? "▲" : "▼" }}
             </button>
@@ -172,6 +188,7 @@
         <!-- 新建 & 复制操作行 -->
         <div class="panel-actions">
           <button class="btn btn-sm" @click="addEntry" :disabled="!selectedWorldbook">＋ 新建</button>
+          <button class="btn btn-sm" @click="duplicateSelected" :disabled="selectedUids.size === 0" title="复制选中的条目">📋 复制选中</button>
           <button class="btn btn-sm" @click="batchCreate" :disabled="!selectedWorldbook" title="批量创建多条空白条目">
             ＋＋ 批量新建
           </button>
@@ -292,6 +309,28 @@ const smartUidTo      = ref<number | null>(null);
 // 快捷删除撤销
 interface UndoEntry { entry: RawEntry; idx: number; timerId?: ReturnType<typeof setTimeout> }
 const undoEntry = ref<UndoEntry | null>(null);
+
+// ─────── 排序 ───────
+const sortMode = ref("uid-asc");
+
+function applySortMode() {
+  const mode = sortMode.value;
+  localEntries.value.sort((a, b) => {
+    switch (mode) {
+      case "uid-asc": return a.uid - b.uid;
+      case "uid-desc": return b.uid - a.uid;
+      case "order-asc": return a.order - b.order;
+      case "order-desc": return b.order - a.order;
+      case "name-asc": return (a.comment || "").localeCompare(b.comment || "");
+      case "name-desc": return (b.comment || "").localeCompare(a.comment || "");
+      case "strategy": {
+        const rank = (e: RawEntry) => e.constant ? 0 : e.selective ? 1 : 2;
+        return rank(a) - rank(b) || a.uid - b.uid;
+      }
+      default: return 0;
+    }
+  });
+}
 
 // ─────── 历史回退栈（每个世界书独立，最多10步） ───────
 const historyMap = reactive(new Map<string, RawEntry[][]>());
@@ -422,10 +461,18 @@ async function loadWorldbook() {
   loading.value = false;
 }
 
-// ─────── SSE 实时同步：后端变更时自动刷新 ───────
-const sseHandler: SseCallback = (data) => {
-  // 仅当当前面板正在查看被更新的世界书时才刷新
-  if (data.name && data.name === selectedWorldbook.value && !isDirty.value) {
+// ─────── SSE 实时同步：后端变更时自动刷新 + 同步到 ST 内存 ───────
+const sseHandler: SseCallback = async (data) => {
+  if (!data.name) return;
+  // 1. 同步到 ST 运行时内存（无论当前面板是否查看该世界书）
+  try {
+    const res = await getWorldbook(data.name);
+    if (res.success && res.data) {
+      await syncWorldbookToST(data.name, res.data.entries);
+    }
+  } catch { /* 静默 */ }
+  // 2. 如果当前面板正在查看被更新的世界书且无未保存修改，自动刷新
+  if (data.name === selectedWorldbook.value && !isDirty.value) {
     loadWorldbook();
   }
 };
@@ -484,6 +531,51 @@ async function doCreateWorldbook() {
   creating.value = false;
 }
 
+// ─────── 世界书重命名 ───────
+async function renameWorldbook() {
+  const oldName = selectedWorldbook.value;
+  if (!oldName) return;
+  const newName = window.prompt(`将「${oldName}」重命名为：`, oldName);
+  if (!newName || newName.trim() === oldName) return;
+  try {
+    // 复制到新名称 → 删除旧的
+    const res = await getWorldbook(oldName);
+    if (!res.success || !res.data) { emit("status", "读取世界书失败", "error"); return; }
+    const createRes = await createWorldbook(newName.trim(), res.data.entries);
+    if (!createRes.success) { emit("status", `创建失败：${createRes.message}`, "error"); return; }
+    const { deleteWorldbook: delWb } = await import("../services/api");
+    await delWb(oldName);
+    // 同步两个到 ST 内存
+    await syncWorldbookToST(newName.trim(), res.data.entries);
+    emit("refresh-worldbooks");
+    await nextTick();
+    selectedWorldbook.value = newName.trim();
+    await loadWorldbook();
+    emit("status", `已重命名「${oldName}」→「${newName.trim()}」`, "success");
+  } catch (e) { emit("status", `重命名失败：${(e as Error).message}`, "error"); }
+}
+
+// ─────── 删除世界书 ───────
+async function confirmDeleteWorldbook() {
+  const name = selectedWorldbook.value;
+  if (!name) return;
+  if (!window.confirm(`确定要删除世界书「${name}」吗？此操作无法撤销！`)) return;
+  try {
+    const { deleteWorldbook: delWb } = await import("../services/api");
+    const res = await delWb(name);
+    if (res.success) {
+      selectedWorldbook.value = "";
+      localEntries.value = [];
+      isDirty.value = false;
+      emit("dirty", false);
+      emit("refresh-worldbooks");
+      emit("status", `已删除世界书「${name}」`, "success");
+    } else {
+      emit("status", `删除失败：${res.message}`, "error");
+    }
+  } catch (e) { emit("status", `删除失败：${(e as Error).message}`, "error"); }
+}
+
 // ─────── 保存（供 App.vue 调用） ───────
 async function save(): Promise<boolean> {
   if (!selectedWorldbook.value || !isDirty.value) return false;
@@ -524,12 +616,17 @@ async function save(): Promise<boolean> {
   isDirty.value = false;
   emit("dirty", false);
 
-  // ── 同步到 ST 内存 ──
-  const synced = await syncWorldbookToST(selectedWorldbook.value, localEntries.value);
-  const msg = synced
-    ? `喵~保存成功啦！已同步到酒馆喵~ ✨（"${selectedWorldbook.value}"，${localEntries.value.length} 条）`
-    : `文件已保存喵，不过 ST 同步出了点问题...手动刷新世界书嘛？ 🔄`;
-  emit("status", msg, synced ? "success" : "info");
+  // ── 同步到 ST 内存（带重试） ──
+  let synced = await syncWorldbookToST(selectedWorldbook.value, localEntries.value);
+  if (!synced) {
+    // 重试一次（CSRF token 可能过期，resetCsrfToken 后重试）
+    synced = await syncWorldbookToST(selectedWorldbook.value, localEntries.value);
+  }
+  emit(
+    "status",
+    `保存成功（"${selectedWorldbook.value}"，${localEntries.value.length} 条）`,
+    "success"
+  );
   return true;
 }
 
@@ -638,23 +735,54 @@ function addEntry() {
   emit("status", "新条目创建好啦喵！快去编辑后点击应用吧~ ✏️", "info");
 }
 
+// ─────── 复制选中条目 ───────
+function duplicateSelected() {
+  if (selectedUids.size === 0) return;
+  const toDup = localEntries.value.filter((e) => selectedUids.has(e.uid));
+  let maxUid = localEntries.value.reduce((m, e) => Math.max(m, e.uid), -1);
+  const copies = toDup.map((e) => ({
+    ...JSON.parse(JSON.stringify(e)),
+    uid: ++maxUid,
+    displayIndex: maxUid,
+    comment: e.comment ? `${e.comment} (副本)` : `UID ${e.uid} 副本`,
+  }));
+  localEntries.value.push(...copies);
+  markDirty();
+  emit("status", `已复制 ${copies.length} 条条目`, "success");
+}
+
 // ─────── 批量新建 ───────
 async function batchCreate() {
-  const input = window.prompt("要创建几条空白条目呢喵？（1-100）~ 🐾", "5");
+  const input = window.prompt(
+    "批量创建设置（格式：数量,策略,order,position）\n" +
+    "策略: constant/selective/vectorized\n" +
+    "例: 5,constant,999,6\n" +
+    "只输入数字则用默认模板",
+    "5"
+  );
   if (input === null) return;
-  const count     = Math.max(1, Math.min(100, parseInt(input, 10) || 1));
-  const overrides = Array.from({ length: count }, () => ({}));
-  const res       = await addEntries(selectedWorldbook.value, overrides);
+  const parts = input.split(",").map((s) => s.trim());
+  const count = Math.max(1, Math.min(100, parseInt(parts[0], 10) || 1));
+  const strategyType = parts[1] || "selective";
+  const orderVal = parts[2] ? parseInt(parts[2], 10) : 100;
+  const posVal = parts[3] ? parseInt(parts[3], 10) : 0;
+
+  const template: Partial<RawEntry> = {
+    constant: strategyType === "constant",
+    selective: strategyType === "selective",
+    vectorized: strategyType === "vectorized",
+    order: orderVal,
+    position: posVal as 0|1|2|3|4|5|6,
+  };
+
+  const overrides = Array.from({ length: count }, () => ({ ...template }));
+  const res = await addEntries(selectedWorldbook.value, overrides);
   if (res.success && res.data) {
     await loadWorldbook();
-    markDirty();
-    // 同步到 ST 运行时内存
-    if (selectedWorldbook.value) {
-      await syncWorldbookToST(selectedWorldbook.value, localEntries.value);
-    }
-    emit("status", `喵~已创建 ${count} 条空白条目啦！已同步到酒馆~ ✨`, "success");
+    await syncWorldbookToST(selectedWorldbook.value, localEntries.value);
+    emit("status", `已创建 ${count} 条条目（策略:${strategyType}, Order:${orderVal}）`, "success");
   } else {
-    emit("status", `呜喵批量创建失败了：${res.message} 😿`, "error");
+    emit("status", `批量创建失败：${res.message}`, "error");
   }
 }
 
@@ -691,6 +819,17 @@ async function batchDelete() {
   selectedUids.clear();
   markDirty();
   emit("status", `已经帮主人删掉了 ${uids.length} 个条目喵~ 🗑️（记得保存哦）`, "info");
+}
+
+// ─────── 条目上移/下移 ───────
+function moveEntry(uid: number, direction: number) {
+  const idx = localEntries.value.findIndex((e) => e.uid === uid);
+  if (idx === -1) return;
+  const newIdx = idx + direction;
+  if (newIdx < 0 || newIdx >= localEntries.value.length) return;
+  const [entry] = localEntries.value.splice(idx, 1);
+  localEntries.value.splice(newIdx, 0, entry);
+  markDirty();
 }
 
 // ─────── 复制到对侧 ───────

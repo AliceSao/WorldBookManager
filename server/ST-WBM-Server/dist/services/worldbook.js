@@ -144,32 +144,8 @@ export async function writeWorldbook(name, entries, user = "default-user") {
     });
     const json = { entries: entriesObj };
     await fs.writeFile(filePath, JSON.stringify(json, null, 2), "utf-8");
-    // 写入完成后自动同步到 ST 运行时内存
-    // ST 原生界面从内存读取世界书，不直接同步会导致数据不一致
-    syncToSTMemory(name, entriesObj).catch(() => { });
-    // 通知所有 SSE 客户端
+    // 通知所有 SSE 客户端（前端收到后会自行通过 CSRF token 同步到 ST 内存）
     broadcastSse("worldbook-updated", { name, user, count: entries.length, timestamp: Date.now() });
-}
-/**
- * 将世界书同步到 ST 运行时内存
- * 调用 ST 原生的 /api/worldbooks/edit 端点，确保 ST 界面显示最新数据
- */
-async function syncToSTMemory(name, entriesObj) {
-    try {
-        // ST 默认端口 8000，也可通过 --port 参数改变，从环境变量或命令行参数获取
-        const port = process.env.SILLY_TAVERN_PORT || process.env.PORT || "8000";
-        const res = await fetch(`http://127.0.0.1:${port}/api/worldbooks/edit`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ name, data: { entries: entriesObj } }),
-        });
-        if (!res.ok) {
-            console.log(`[wb-manager] ST 内存同步失败 (${res.status}): ${name}`);
-        }
-    }
-    catch {
-        // ST 端点可能不可用，静默失败
-    }
 }
 /** 创建新世界书（若已存在则覆盖） */
 export async function createWorldbook(name, entries = [], user = "default-user") {
