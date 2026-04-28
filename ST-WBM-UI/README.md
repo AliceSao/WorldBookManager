@@ -1,6 +1,6 @@
-# ST-WBM-UI
+# ST-WBM-UI v1.1.0
 
-  SillyTavern 世界书管理器前端扩展 (Vue 3 + TypeScript)。
+  SillyTavern 世界书管理器前端扩展。
 
   > 完整文档、安装说明与使用指南见主仓库文档目录：
   >
@@ -8,7 +8,6 @@
 
   ## 概述
 
-  - **功能**：注入入口面板 + 23 条斜杠命令，依赖 ST-WBM-Server 后端
+  - **功能**：注入入口面板 + iframe 弹窗打开双面板 Vue UI，依赖 ST-WBM-Server 后端
   - **安装**：克隆本仓库到 `SillyTavern/public/extensions/third-party/ST-WBM-UI/`
-  - **依赖**：JS-Slash-Runner（酒馆助手）+ [ST-WBM-Server](https://github.com/AliceSao/ST-WBM-Server)
-  
+  - **依赖**：[ST-WBM-Server](https://github.com/AliceSao/ST-WBM-Server)

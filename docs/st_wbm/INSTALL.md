@@ -4,7 +4,7 @@
 
   - SillyTavern（最新版）
   - Node.js 18+（SillyTavern 自带）
-  - JS-Slash-Runner 扩展（可选，启用斜杠命令功能）
+  - Python 3.10+（仅使用 Python CLI 时需要）
 
   ---
 
@@ -15,7 +15,7 @@
   ├── ST-WBM-UI/                  ← 前端扩展（安装到 ST extensions）
   │   ├── manifest.json
   │   ├── style.css
-  │   ├── index.js                ← 主扩展文件（注入面板 + 23条命令）
+  │   ├── index.js                ← 主扩展文件（注入面板 + iframe 弹窗）
   │   ├── src/                    ← Vue 3 源代码（无需修改）
   │   └── ...
   ├── server/
@@ -84,16 +84,6 @@
 
   ---
 
-  ## 步骤三：安装 JS-Slash-Runner（推荐）
-
-  JS-Slash-Runner 提供 `getWorldbook()`、`updateWorldbookWith()` 等全局函数，是斜杠命令的依赖。
-
-  1. 在 ST 扩展面板中搜索 `JS-Slash-Runner`
-  2. 安装并启用
-  3. 重启 SillyTavern
-
-  ---
-
   ## 数据路径配置
 
   后端默认从以下路径读写世界书文件：
@@ -121,4 +111,3 @@
   npm install
   npx tsc         # 输出到 dist/
   ```
-  
