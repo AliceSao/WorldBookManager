@@ -33,35 +33,35 @@ Thumbs.db
 
 # npm
 node_modules/
-**/node_modules/
-*/node_modules/
-ST-WBM-UI/node_modules/
-server/ST-WBM-Server/node_modules/
 
-# 世界书数据
+# 世界书数据（用户工作产物，不推送）
 src/OLD/
 src/NEW/
 src/JSON/
 src/TXT/
 
-# 构建相关（Python CLI 不再提供编译版本）
-build/
+# Python 构建相关（不再提供编译版本）
 dist/
+build/
 *.spec
 build.bat
 build.sh
 *.toc
 *.zip
 *.pkg
-*.html
 warn-*.txt
 base_library.zip
+
+# 但保留 Server 的 dist/（编译后的 JS，用户运行需要）和 web/dist/（Vue 构建产物）
+!server/ST-WBM-Server/dist/
+!server/ST-WBM-Server/web/dist/
 
 # 本地文档（不推送）
 ReadMe_WB_Manager.md
 
 # 配置
 config/
+src/config/
 
 # 备份文件夹
 backup/
