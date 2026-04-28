@@ -219,56 +219,37 @@ function getSTContext(): STContext | null {
 
 /**
  * 将条目同步到 SillyTavern 内存。
- * 优先使用 ST 原生 saveWorldInfo API；
- * 降级为 HTTP 调用 /api/worldbooks/edit（携带 ST 的 CSRF token）。
+ * 使用 ST 原生 saveWorldInfo API（内存操作，不走 HTTP，完全绕过 CSRF）。
+ * 如果 ST 原生 API 不可用（跨域 iframe 等），静默失败——数据已保存在文件系统中。
  */
 export async function syncWorldbookToST(
   name: string,
   entries: RawEntry[]
 ): Promise<boolean> {
   const st = getSTContext();
-
-  // ── 方案1：使用 ST 原生 loadWorldInfo + saveWorldInfo ──
-  if (st?.loadWorldInfo && st?.saveWorldInfo) {
-    try {
-      const data = await st.loadWorldInfo(name);
-      if (data) {
-        // 构建新的 entries 对象，保留原始 data 的其他字段（originalData 等元数据）
-        const entriesObj: Record<string, RawEntry> = {};
-        entries.forEach((e, i) => { entriesObj[String(i)] = e; });
-        // 用展开创建副本，不直接修改原对象
-        const updated = { ...data, entries: entriesObj };
-        await st.saveWorldInfo(name, updated, true);
-        try { st.reloadWorldInfoEditor?.(name); } catch { /* 静默 */ }
-        try { await st.updateWorldInfoList?.(); } catch { /* 静默 */ }
-        return true;
-      }
-    } catch { /* 降级到方案2 */ }
-  }
-
-  // ── 方案2：HTTP 调用，使用 ST 的 getRequestHeaders 获取正确的 CSRF token ──
-  const entriesObj: Record<string, RawEntry> = {};
-  entries.forEach((e, i) => { entriesObj[String(i)] = e; });
-
-  let headers: Record<string, string> = { "Content-Type": "application/json" };
-  if (st?.getRequestHeaders) {
-    try { headers = { ...st.getRequestHeaders() }; } catch { /* 使用默认 headers */ }
+  if (!st?.loadWorldInfo || !st?.saveWorldInfo) {
+    // ST 原生 API 不可用，文件已由后端保存，用户刷新即可看到
+    return false;
   }
 
   try {
-    const res = await fetch("/api/worldbooks/edit", {
-      method: "POST",
-      headers,
-      credentials: "include",
-      body: JSON.stringify({ name, data: { entries: entriesObj } }),
-    });
-    if (res.ok) {
-      // 刷新原生编辑器
-      try { st?.reloadWorldInfoEditor?.(name); } catch { /* 静默 */ }
-      try { await st?.updateWorldInfoList?.(); } catch { /* 静默 */ }
-    }
-    return res.ok;
+    const data = await st.loadWorldInfo(name);
+    if (!data) return false;
+
+    // 构建新 entries，保留原始 data 的其他元数据（originalData 等）
+    const entriesObj: Record<string, RawEntry> = {};
+    entries.forEach((e, i) => { entriesObj[String(i)] = e; });
+    const updated = { ...data, entries: entriesObj };
+
+    // saveWorldInfo 是内存操作，不走 HTTP，不触发 CSRF
+    await st.saveWorldInfo(name, updated, true);
+
+    // 刷新原生编辑器
+    try { st.reloadWorldInfoEditor?.(name); } catch { /* 静默 */ }
+    try { await st.updateWorldInfoList?.(); } catch { /* 静默 */ }
+    return true;
   } catch {
+    // 文件已由后端保存，同步失败不影响数据安全
     return false;
   }
 }
