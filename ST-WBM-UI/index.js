@@ -86,6 +86,13 @@
         ctr.style.flexDirection  = "column";
       }
       existing.style.display = "flex";
+      existing.style.padding = "";
+      // 重置全屏状态
+      const fsBtnEl = existing.querySelector("[data-wbm-fs-btn]");
+      if (fsBtnEl) {
+        fsBtnEl.innerHTML = "⛶ 全屏";
+        fsBtnEl.__wbmIsFs = false;
+      }
       lockPageScroll();
       return;
     }
@@ -134,8 +141,9 @@
     });
 
     // 全屏切换按钮
-    let isFs = false;
     const fsBtn = document.createElement("button");
+    fsBtn.setAttribute("data-wbm-fs-btn", "1");
+    (fsBtn as any).__wbmIsFs = false;
     fsBtn.innerHTML = "⛶ 全屏";
     fsBtn.title = "切换全屏";
     Object.assign(fsBtn.style, {
@@ -152,7 +160,8 @@
       flexShrink: "0",
     });
     fsBtn.addEventListener("click", () => {
-      isFs = !isFs;
+      const isFs = !(fsBtn as any).__wbmIsFs;
+      (fsBtn as any).__wbmIsFs = isFs;
       fsBtn.innerHTML = isFs ? "⛶ 退出全屏" : "⛶ 全屏";
       if (isFs) {
         topBar.style.width = "100%";

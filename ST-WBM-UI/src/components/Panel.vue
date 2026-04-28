@@ -562,19 +562,17 @@ async function loadWorldbook() {
   loading.value = false;
 }
 
-// ─────── SSE 实时同步：后端变更时自动刷新 + 同步到 ST 内存 ───────
+// ─────── SSE 实时同步：后端变更时自动刷新 ───────
+// 标记：自己触发的写入不要重复响应（防止自反馈循环）
+let _skipNextSse = false;
+
 const sseHandler: SseCallback = async (data) => {
   if (!data.name) return;
-  // 1. 同步到 ST 运行时内存（无论当前面板是否查看该世界书）
-  try {
-    const res = await getWorldbook(data.name);
-    if (res.success && res.data) {
-      await syncWorldbookToST(data.name, res.data.entries);
-    }
-  } catch { /* 静默 */ }
-  // 2. 如果当前面板正在查看被更新的世界书且无未保存修改，自动刷新
+  // 跳过自己触发的写入
+  if (_skipNextSse) { _skipNextSse = false; return; }
+  // 仅当当前面板正在查看被更新的世界书且无未保存修改时才刷新
   if (data.name === selectedWorldbook.value && !isDirty.value) {
-    loadWorldbook();
+    await loadWorldbook();
   }
 };
 
@@ -716,6 +714,7 @@ async function save(): Promise<boolean> {
 
   isDirty.value = false;
   emit("dirty", false);
+  _skipNextSse = true; // 跳过本次写入触发的 SSE
 
   // ── 同步到 ST 内存（带重试） ──
   let synced = await syncWorldbookToST(selectedWorldbook.value, localEntries.value);
@@ -941,23 +940,27 @@ function openMoveDialog(dir: "up" | "down") {
 
 function doBatchMove() {
   const steps = Math.max(1, moveSteps.value || 1);
-  const dir = moveDirection.value === "up" ? -steps : steps;
   showMoveDialog.value = false;
-  // 按当前顺序获取选中条目的索引
-  const indices = localEntries.value
-    .map((e, i) => selectedUids.has(e.uid) ? i : -1)
-    .filter(i => i !== -1);
-  if (dir < 0) indices.sort((a, b) => a - b); // 上移：从上往下处理
-  else indices.sort((a, b) => b - a);          // 下移：从下往上处理
-  for (const idx of indices) {
-    const newIdx = Math.max(0, Math.min(localEntries.value.length - 1, idx + dir));
-    if (newIdx !== idx) {
-      const [entry] = localEntries.value.splice(idx, 1);
-      localEntries.value.splice(newIdx, 0, entry);
-    }
-  }
+  const all = localEntries.value;
+  const selSet = new Set(selectedUids);
+  // 提取选中和未选中
+  const selected: RawEntry[] = [];
+  const rest: RawEntry[] = [];
+  const selPositions: number[] = [];
+  all.forEach((e, i) => {
+    if (selSet.has(e.uid)) { selected.push(e); selPositions.push(i); }
+    else rest.push(e);
+  });
+  if (selected.length === 0) return;
+  // 计算新的插入位置（基于第一个/最后一个选中项）
+  const anchorIdx = moveDirection.value === "up"
+    ? Math.max(0, selPositions[0] - steps)
+    : Math.min(all.length - selected.length, selPositions[selPositions.length - 1] - selected.length + 1 + steps);
+  // 重建数组：在 rest 的 anchorIdx 位置插入 selected
+  rest.splice(anchorIdx, 0, ...selected);
+  localEntries.value = rest;
   markDirty();
-  emit("status", `已${moveDirection.value === "up" ? "上" : "下"}移 ${indices.length} 条条目 ${steps} 步`, "success");
+  emit("status", `已${moveDirection.value === "up" ? "上" : "下"}移 ${selected.length} 条条目 ${steps} 步`, "success");
 }
 
 // ─────── 复制到对侧 ───────

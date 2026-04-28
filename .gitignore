@@ -7,7 +7,7 @@ __pycache__/
 *.egg
 .installed.cfg
 
-# 虚拟环境
+# Virtual Environment
 venv/
 ENV/
 env/
@@ -20,27 +20,27 @@ env/
 *.swo
 *~
 
-# 操作系统
+# OS
 .DS_Store
 Thumbs.db
 
-# 日志
+# Log
 *.log
 
-# 临时文件
+# Temp
 *.tmp
 *.backup
 
 # npm
 node_modules/
 
-# 世界书数据（用户工作产物，不推送）
+# Worldbook Data (user workspace, not pushed)
 src/OLD/
 src/NEW/
 src/JSON/
 src/TXT/
 
-# Python 构建相关（不再提供编译版本）
+# Python Build (no compiled binary provided)
 dist/
 build/
 *.spec
@@ -52,22 +52,22 @@ build.sh
 warn-*.txt
 base_library.zip
 
-# 但保留 Server 的 dist/（编译后的 JS，用户运行需要）和 web/dist/（Vue 构建产物）
+# Keep Server dist/ (compiled JS) and web/dist/ (Vue build output)
 !server/ST-WBM-Server/dist/
 !server/ST-WBM-Server/web/dist/
 
-# 本地文档（不推送）
+# Local doc (not pushed)
 ReadMe_WB_Manager.md
 
-# 配置
+# Config
 config/
 src/config/
 
-# 备份文件夹
+# Backup
 backup/
 
-# 临时工作文件夹
+# Temp workspace
 tmp/
 
-# Kilo ���û���
+# Kilo config cache
 .kilo/

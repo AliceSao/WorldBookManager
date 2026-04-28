@@ -17,13 +17,14 @@ export function fail(res: Response, message: string, status = 400) {
  * 将 ENOENT/EACCES 等 Node.js 文件系统错误转为用户友好消息
  */
 export function safeErrorMessage(e: unknown, fallback = "操作失败"): string {
-  const msg = (e as Error)?.message ?? fallback;
-  // 移除文件路径信息（Windows 和 Unix 路径格式）
-  if (/ENOENT/.test(msg)) return "文件或目录不存在";
-  if (/EACCES|EPERM/.test(msg)) return "权限不足，无法访问文件";
-  if (/EEXIST/.test(msg)) return "文件已存在";
-  if (/EISDIR/.test(msg)) return "目标是目录而非文件";
-  // 如果消息包含路径特征，替换为安全消息
-  if (/[A-Z]:\\|\/data\/|\/worlds\//.test(msg)) return fallback;
+  const msg = typeof e === "string" ? e : ((e as Error)?.message ?? fallback);
+  // 将 Node.js 文件系统错误转为安全消息
+  if (/ENOENT/.test(msg)) return "file or directory not found";
+  if (/EACCES|EPERM/.test(msg)) return "permission denied";
+  if (/EEXIST/.test(msg)) return "file already exists";
+  if (/EISDIR/.test(msg)) return "target is a directory";
+  // 检测并移除路径泄露（Windows 大小写 + Unix 绝对路径）
+  if (/[a-zA-Z]:\\|\/data\/|\/worlds\/|\/home\/|\/tmp\/|\/etc\//.test(msg)) return fallback;
+  // 处理字符串类型的异常
   return msg;
 }

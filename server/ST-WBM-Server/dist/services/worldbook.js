@@ -67,14 +67,14 @@ export function normalizeEntry(raw, uid) {
         displayIndex: raw.displayIndex ?? uid,
         comment: raw.comment ?? "",
         disable: raw.disable ?? false,
-        // 保证三个策略字段互斥：constant 优先，其次 vectorized，默认 selective
+        // 保证三个策略字段严格互斥：constant > vectorized > selective
         constant: raw.constant ?? false,
         selective: raw.constant ? false : (raw.vectorized ? false : (raw.selective ?? true)),
+        vectorized: raw.constant ? false : (raw.vectorized ?? false),
         key: Array.isArray(raw.key) ? raw.key : [],
         selectiveLogic: raw.selectiveLogic ?? 0,
         keysecondary: Array.isArray(raw.keysecondary) ? raw.keysecondary : [],
         scanDepth: raw.scanDepth ?? null,
-        vectorized: raw.vectorized ?? false,
         position: raw.position ?? 0,
         role: raw.role ?? 0,
         depth: raw.depth ?? 4,
