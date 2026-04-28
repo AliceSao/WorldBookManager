@@ -340,7 +340,28 @@
 
   function init() {
     log(`ST-WBM-UI v${VERSION} 正在初始化...`);
+
+    // 先尝试直接注入
     injectPanel();
+
+    // 如果容器还不存在（ST 延迟加载设置面板），用 MutationObserver 等待
+    if (!document.getElementById("wbm-panel")) {
+      log("容器未就绪，等待 extensions_settings 出现...");
+      const obs = new MutationObserver(() => {
+        const container = document.getElementById("extensions_settings") ||
+          document.querySelector(".extensions_settings") ||
+          document.querySelector("#extension_settings");
+        if (container) {
+          obs.disconnect();
+          injectPanel();
+          log("延迟注入完成");
+        }
+      });
+      obs.observe(document.body, { childList: true, subtree: true });
+      // 30秒后放弃
+      setTimeout(() => obs.disconnect(), 30000);
+    }
+
     log("初始化完成");
   }
 
