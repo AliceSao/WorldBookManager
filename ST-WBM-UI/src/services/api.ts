@@ -231,15 +231,14 @@ export async function syncWorldbookToST(
   // ── 方案1：使用 ST 原生 loadWorldInfo + saveWorldInfo ──
   if (st?.loadWorldInfo && st?.saveWorldInfo) {
     try {
-      // 加载当前世界书数据结构
       const data = await st.loadWorldInfo(name);
       if (data) {
-        // 用新条目替换 entries
+        // 构建新的 entries 对象，保留原始 data 的其他字段（originalData 等元数据）
         const entriesObj: Record<string, RawEntry> = {};
         entries.forEach((e, i) => { entriesObj[String(i)] = e; });
-        data.entries = entriesObj;
-        await st.saveWorldInfo(name, data, true);
-        // 刷新原生编辑器
+        // 用展开创建副本，不直接修改原对象
+        const updated = { ...data, entries: entriesObj };
+        await st.saveWorldInfo(name, updated, true);
         try { st.reloadWorldInfoEditor?.(name); } catch { /* 静默 */ }
         try { await st.updateWorldInfoList?.(); } catch { /* 静默 */ }
         return true;
@@ -280,7 +279,11 @@ export async function syncWorldbookToST(
  */
 export async function getSTCharacters(): Promise<string[]> {
   try {
-    const res = await fetch("/api/characters/", { credentials: "include" });
+    const st = getSTContext();
+    const headers: Record<string, string> = st?.getRequestHeaders
+      ? { ...st.getRequestHeaders() }
+      : { "Content-Type": "application/json" };
+    const res = await fetch("/api/characters/", { credentials: "include", headers });
     if (!res.ok) return [];
     const data = await res.json();
     if (Array.isArray(data)) {

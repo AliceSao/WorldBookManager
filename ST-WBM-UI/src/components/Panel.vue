@@ -533,10 +533,17 @@ async function loadWorldbook() {
   }
   // 切换前检查：如果有未保存的修改，弹窗提示
   if (isDirty.value) {
+    const prev = localEntries.value.length > 0 ? selectedWorldbook.value : "";
     const action = window.confirm(
       "当前有未保存的修改，是否放弃修改并切换？\n点击「确定」放弃修改，点击「取消」留在当前页面。"
     );
-    if (!action) return;
+    if (!action) {
+      // 恢复 select 值（v-model 已经变了，需要回退）
+      const target = selectedWorldbook.value;
+      selectedWorldbook.value = "";
+      nextTick(() => { selectedWorldbook.value = prev || target; });
+      return;
+    }
     isDirty.value = false;
     emit("dirty", false);
   }

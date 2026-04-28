@@ -91,7 +91,7 @@
       const fsBtnEl = existing.querySelector("[data-wbm-fs-btn]");
       if (fsBtnEl) {
         fsBtnEl.innerHTML = "⛶ 全屏";
-        fsBtnEl.__wbmIsFs = false;
+        fsBtnEl._wbmIsFs = false;
       }
       lockPageScroll();
       return;
@@ -143,7 +143,7 @@
     // 全屏切换按钮
     const fsBtn = document.createElement("button");
     fsBtn.setAttribute("data-wbm-fs-btn", "1");
-    (fsBtn as any).__wbmIsFs = false;
+    fsBtn._wbmIsFs = false;
     fsBtn.innerHTML = "⛶ 全屏";
     fsBtn.title = "切换全屏";
     Object.assign(fsBtn.style, {
@@ -160,8 +160,8 @@
       flexShrink: "0",
     });
     fsBtn.addEventListener("click", () => {
-      const isFs = !(fsBtn as any).__wbmIsFs;
-      (fsBtn as any).__wbmIsFs = isFs;
+      const isFs = !fsBtn._wbmIsFs;
+      fsBtn._wbmIsFs = isFs;
       fsBtn.innerHTML = isFs ? "⛶ 退出全屏" : "⛶ 全屏";
       if (isFs) {
         topBar.style.width = "100%";
@@ -236,13 +236,16 @@
     });
     iframe.allow = "clipboard-write";
 
-    // ESC 关闭
-    function onKeydown(e) {
-      if (e.key === "Escape" && overlay.style.display !== "none") {
-        closeModal(overlay);
-      }
+    // ESC 关闭（全局只注册一次）
+    if (!window._wbmEscRegistered) {
+      window._wbmEscRegistered = true;
+      document.addEventListener("keydown", (e) => {
+        const ov = document.getElementById("wbm-modal-overlay");
+        if (e.key === "Escape" && ov && ov.style.display !== "none") {
+          closeModal(ov);
+        }
+      });
     }
-    document.addEventListener("keydown", onKeydown);
 
     // 点击遮罩背景关闭
     overlay.addEventListener("click", (e) => {
@@ -373,12 +376,11 @@
     log("初始化完成");
   }
 
-  // ST 通过 import() 加载扩展 JS，此时 DOM 已就绪
-  // 但设置面板可能还未渲染，所以 init() 内有 MutationObserver 兜底
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", init);
+  // ST 通过 import() 加载扩展 JS，DOM 已就绪
+  // 设置面板可能还未渲染，init() 内有 MutationObserver 兜底
+  if (typeof jQuery !== "undefined") {
+    jQuery(init);
   } else {
-    // DOM 已就绪，直接初始化（可能需要等 ST 渲染设置面板）
-    setTimeout(init, 100);
+    init();
   }
 })();
