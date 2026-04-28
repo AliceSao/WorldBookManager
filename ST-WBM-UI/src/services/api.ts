@@ -252,6 +252,16 @@ export async function syncWorldbookToST(
       });
     }
 
+    if (res.ok) {
+      // 额外：通知 ST 重新加载世界书选择器（刷新原生编辑器视图）
+      try {
+        // 通过 ST 的 eventSource 触发 WORLDINFO_UPDATED 事件（如果可用）
+        const stWindow = window.parent as any;
+        if (stWindow?.eventSource && stWindow?.event_types?.WORLDINFO_UPDATED) {
+          stWindow.eventSource.emit(stWindow.event_types.WORLDINFO_UPDATED);
+        }
+      } catch { /* 事件总线不可用，静默 */ }
+    }
     return res.ok;
   } catch {
     return false;

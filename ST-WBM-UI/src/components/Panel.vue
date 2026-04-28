@@ -28,15 +28,16 @@
       <span v-if="isDirty" class="dirty-badge" title="有未保存的修改">●</span>
       <button v-if="canUndo()" class="btn btn-sm btn-icon" @click="undoHistory" title="回退到上一步">↩</button>
       <span class="entry-count" v-if="selectedWorldbook">{{ filteredEntries.length }}/{{ localEntries.length }}</span>
-      <a
-        v-if="selectedWorldbook"
-        :href="exportUrl"
-        :download="`${selectedWorldbook}.json`"
-        class="btn btn-sm"
-        title="下载此世界书 JSON 文件"
-      >📤</a>
-      <button v-if="selectedWorldbook" class="btn btn-sm" @click="renameWorldbook" title="重命名世界书">✏️</button>
-      <button v-if="selectedWorldbook" class="btn btn-sm" @click="confirmDeleteWorldbook" title="删除世界书">🗑️</button>
+
+      <!-- 操作菜单（折叠 export/rename/delete） -->
+      <div v-if="selectedWorldbook" class="wb-menu-wrap">
+        <button class="btn btn-sm btn-icon" @click="wbMenuOpen = !wbMenuOpen" title="世界书操作">⋯</button>
+        <div v-if="wbMenuOpen" class="wb-menu" @click.stop>
+          <a :href="exportUrl" :download="`${selectedWorldbook}.json`" class="wb-menu-item" @click="wbMenuOpen = false">📤 导出</a>
+          <button class="wb-menu-item" @click="wbMenuOpen = false; renameWorldbook()">✏️ 重命名</button>
+          <button class="wb-menu-item wb-menu-danger" @click="wbMenuOpen = false; confirmDeleteWorldbook()">🗑️ 删除</button>
+        </div>
+      </div>
     </div>
 
     <!-- 搜索栏（可折叠） -->
@@ -120,17 +121,9 @@
             selected: selectedUids.has(entry.uid),
             disabled: entry.disable,
             expanded: expandedUid === entry.uid,
-            'drag-over': dragOverUid === entry.uid,
           }"
-          draggable="true"
-          @dragstart="onDragStart(entry.uid, $event)"
-          @dragover.prevent="onDragOver(entry.uid)"
-          @dragleave="dragOverUid = null"
-          @drop.prevent="onDrop(entry.uid)"
-          @dragend="dragOverUid = null"
         >
           <div class="entry-main" @click="handleRowClick(entry.uid, $event)">
-            <span class="drag-handle" title="拖动排序">⠿</span>
             <input
               type="checkbox"
               :checked="selectedUids.has(entry.uid)"
@@ -381,33 +374,14 @@ const lastClickedUid    = ref<number | null>(null);
 // 搜索栏折叠
 const searchExpanded = ref(typeof window !== "undefined" ? window.innerWidth > 768 : true);
 
-// 拖动排序
-const dragUid = ref<number | null>(null);
-const dragOverUid = ref<number | null>(null);
-
-function onDragStart(uid: number, ev: DragEvent) {
-  dragUid.value = uid;
-  if (ev.dataTransfer) {
-    ev.dataTransfer.effectAllowed = "move";
-    ev.dataTransfer.setData("text/plain", String(uid));
-  }
+// 世界书操作菜单
+const wbMenuOpen = ref(false);
+function closeWbMenuOnOutside(ev: MouseEvent) {
+  const target = ev.target as HTMLElement;
+  if (!target.closest(".wb-menu-wrap")) wbMenuOpen.value = false;
 }
-
-function onDragOver(uid: number) {
-  if (uid !== dragUid.value) dragOverUid.value = uid;
-}
-
-function onDrop(targetUid: number) {
-  dragOverUid.value = null;
-  if (dragUid.value === null || dragUid.value === targetUid) return;
-  const fromIdx = localEntries.value.findIndex(e => e.uid === dragUid.value);
-  const toIdx = localEntries.value.findIndex(e => e.uid === targetUid);
-  if (fromIdx === -1 || toIdx === -1) return;
-  const [entry] = localEntries.value.splice(fromIdx, 1);
-  localEntries.value.splice(toIdx, 0, entry);
-  markDirty();
-  dragUid.value = null;
-}
+onMounted(() => document.addEventListener("click", closeWbMenuOnOutside));
+onUnmounted(() => document.removeEventListener("click", closeWbMenuOnOutside));
 
 // 批量创建弹窗
 const showBatchCreateDialog = ref(false);

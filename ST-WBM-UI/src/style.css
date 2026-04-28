@@ -581,10 +581,48 @@ body {
 }
 .entry-row:hover .drag-handle { opacity: 0.7; }
 .drag-handle:active { cursor: grabbing; }
-.entry-row.drag-over {
-  border-top: 2px solid var(--accent) !important;
-  background: var(--entry-sel);
+/* 世界书操作菜单（下拉） */
+.wb-menu-wrap {
+  position: relative;
+  flex-shrink: 0;
 }
+
+.wb-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-deep);
+  z-index: 100;
+  min-width: 140px;
+  display: flex;
+  flex-direction: column;
+  padding: 4px;
+  gap: 2px;
+}
+
+.wb-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  background: transparent;
+  border: none;
+  border-radius: 4px;
+  color: var(--text);
+  font-size: 12px;
+  cursor: pointer;
+  text-align: left;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: background 0.15s;
+}
+
+.wb-menu-item:hover { background: var(--btn-hover); }
+.wb-menu-danger { color: var(--danger); }
+.wb-menu-danger:hover { background: rgba(212,96,96,0.15); }
 
 /* ─────────── 条目列表 ─────────── */
 .panel-entries {

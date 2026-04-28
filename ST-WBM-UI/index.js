@@ -130,7 +130,48 @@
       flexShrink: "0",
       paddingRight: "8px",
       boxSizing: "border-box",
+      gap: "6px",
     });
+
+    // 全屏切换按钮
+    let isFs = false;
+    const fsBtn = document.createElement("button");
+    fsBtn.innerHTML = "⛶ 全屏";
+    fsBtn.title = "切换全屏";
+    Object.assign(fsBtn.style, {
+      background: "rgba(20,10,30,0.88)",
+      border: "1px solid rgba(255,255,255,0.28)",
+      borderRadius: "6px",
+      padding: "5px 14px",
+      cursor: "pointer",
+      color: "rgba(255,255,255,0.85)",
+      fontSize: "13px",
+      fontWeight: "600",
+      display: "flex", alignItems: "center", gap: "5px",
+      boxShadow: "0 2px 8px rgba(0,0,0,0.4)",
+      flexShrink: "0",
+    });
+    fsBtn.addEventListener("click", () => {
+      isFs = !isFs;
+      fsBtn.innerHTML = isFs ? "⛶ 退出全屏" : "⛶ 全屏";
+      if (isFs) {
+        topBar.style.width = "100%";
+        container.style.width = "100%";
+        container.style.height = "calc(100dvh - 32px)";
+        container.style.borderRadius = "0";
+        overlay.style.padding = "0";
+        overlay.style.alignItems = "stretch";
+      } else {
+        const mw = window.innerWidth < 1100 ? "100%" : "min(1440px, 96vw)";
+        topBar.style.width = mw;
+        container.style.width = mw;
+        if (window.innerWidth >= 1100) {
+          container.style.height = "min(900px, calc(92vh - 36px))";
+          container.style.borderRadius = "12px";
+        }
+      }
+    });
+    topBar.appendChild(fsBtn);
 
     const closeBtn = document.createElement("button");
     closeBtn.innerHTML = "✕ 关闭";
