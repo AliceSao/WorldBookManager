@@ -1,42 +1,37 @@
 <template>
   <div class="panel">
-    <!-- 面板头部 -->
+    <!-- 面板头部（紧凑：当前书名 + 状态 + 菜单） -->
     <div class="panel-header">
-      <!-- 世界书搜索 + 选择 + 新建 -->
-      <div class="wb-select-wrap">
-        <div class="wb-search-row" v-if="worldbooks.length > 6">
-          <input
-            v-model="wbSearchQuery"
-            class="search-input wb-search-input"
-            placeholder="🔍 搜索世界书喵~"
-          />
-          <button v-if="wbSearchQuery" class="btn btn-sm btn-icon" @click="wbSearchQuery = ''" title="清空搜索">✕</button>
-        </div>
-        <div class="wb-select-row">
-          <select v-model="selectedWorldbook" class="wb-select" @change="loadWorldbook">
-            <option value="">— 选择世界书 —</option>
-            <option
-              v-if="filteredWorldbookList.length === 0 && wbSearchQuery"
-              disabled
-              value=""
-            >没找到这本世界书喵~ 🐱</option>
-            <option v-for="wb in filteredWorldbookList" :key="wb" :value="wb">{{ wb }}</option>
-          </select>
-          <button class="btn btn-sm btn-icon wb-new-btn" @click="openCreateDialog" title="新建世界书">＋</button>
-        </div>
-      </div>
+      <button class="wb-toggle-btn" @click="wbSelectorOpen = !wbSelectorOpen">
+        📖 {{ selectedWorldbook || '选择世界书' }}
+        <span class="wb-toggle-arrow">{{ wbSelectorOpen ? '▾' : '▸' }}</span>
+      </button>
       <span v-if="isDirty" class="dirty-badge" title="有未保存的修改">●</span>
-      <button v-if="canUndo()" class="btn btn-sm btn-icon" @click="undoHistory" title="回退到上一步">↩</button>
+      <button v-if="canUndo()" class="btn btn-sm btn-icon" @click="undoHistory" title="回退">↩</button>
       <span class="entry-count" v-if="selectedWorldbook">{{ filteredEntries.length }}/{{ localEntries.length }}</span>
-
-      <!-- 操作菜单（折叠 export/rename/delete） -->
       <div v-if="selectedWorldbook" class="wb-menu-wrap">
-        <button class="btn btn-sm btn-icon" @click="wbMenuOpen = !wbMenuOpen" title="世界书操作">⋯</button>
+        <button class="btn btn-sm btn-icon" @click="wbMenuOpen = !wbMenuOpen" title="操作">⋯</button>
         <div v-if="wbMenuOpen" class="wb-menu" @click.stop>
           <a :href="exportUrl" :download="`${selectedWorldbook}.json`" class="wb-menu-item" @click="wbMenuOpen = false">📤 导出</a>
           <button class="wb-menu-item" @click="wbMenuOpen = false; renameWorldbook()">✏️ 重命名</button>
           <button class="wb-menu-item wb-menu-danger" @click="wbMenuOpen = false; confirmDeleteWorldbook()">🗑️ 删除</button>
         </div>
+      </div>
+    </div>
+
+    <!-- 世界书选择器（可折叠） -->
+    <div v-show="wbSelectorOpen" class="wb-selector-panel">
+      <div class="wb-search-row" v-if="worldbooks.length > 6">
+        <input v-model="wbSearchQuery" class="search-input wb-search-input" placeholder="🔍 搜索世界书..." />
+        <button v-if="wbSearchQuery" class="btn btn-sm btn-icon" @click="wbSearchQuery = ''" title="清空">✕</button>
+      </div>
+      <div class="wb-select-row">
+        <select v-model="selectedWorldbook" class="wb-select" @change="wbSelectorOpen = false; loadWorldbook()">
+          <option value="">— 选择世界书 —</option>
+          <option v-if="filteredWorldbookList.length === 0 && wbSearchQuery" disabled value="">未找到</option>
+          <option v-for="wb in filteredWorldbookList" :key="wb" :value="wb">{{ wb }}</option>
+        </select>
+        <button class="btn btn-sm btn-icon wb-new-btn" @click="openCreateDialog" title="新建世界书">＋</button>
       </div>
     </div>
 
@@ -185,33 +180,32 @@
           @refresh="loadWorldbook"
         />
 
-        <!-- 智能选中行 -->
-        <div v-if="selectedWorldbook" class="smart-select-row">
-          <span class="smart-label">选中：</span>
-          <button class="btn btn-sm" @click="selectByStrategy('constant')" title="选中所有常量条目">🔵常量</button>
-          <button class="btn btn-sm" @click="selectByStrategy('selective')" title="选中所有绿灯条目">🟢绿灯</button>
-          <button class="btn btn-sm" @click="selectByStrategy('vectorized')" title="选中所有向量化条目">🔗向量</button>
-          <button class="btn btn-sm" @click="showSmartDialog = 'keyword'" title="按关键字批量选中">🔤关键字</button>
-          <button class="btn btn-sm" @click="showSmartDialog = 'uid-range'" title="按UID区间批量选中">🆔区间</button>
+        <!-- 创建组 -->
+        <div class="action-group">
+          <span class="action-group-label">创建</span>
+          <button class="btn btn-sm" @click="addEntry" :disabled="!selectedWorldbook">＋ 新建</button>
+          <button class="btn btn-sm" @click="openBatchCreate" :disabled="!selectedWorldbook">＋＋ 批量</button>
+          <button class="btn btn-sm" @click="duplicateSelected" :disabled="selectedUids.size === 0">📋 复制</button>
+          <button class="btn btn-sm" :disabled="selectedUids.size === 0 || !otherWorldbook" @click="emitCopyToOther">
+            {{ side === 'left' ? '→右' : '←左' }}
+          </button>
         </div>
 
-        <!-- 新建 & 复制操作行 -->
-        <div class="panel-actions">
-          <button class="btn btn-sm" @click="addEntry" :disabled="!selectedWorldbook">＋ 新建</button>
-          <button class="btn btn-sm" @click="duplicateSelected" :disabled="selectedUids.size === 0" title="复制选中的条目">📋 复制选中</button>
-          <button class="btn btn-sm" @click="openBatchCreate" :disabled="!selectedWorldbook" title="批量创建（可设置模板）">
-            ＋＋ 批量新建
-          </button>
-          <button class="btn btn-sm" @click="openMoveDialog('up')" :disabled="selectedUids.size === 0" title="批量上移">⬆ 批量上移</button>
-          <button class="btn btn-sm" @click="openMoveDialog('down')" :disabled="selectedUids.size === 0" title="批量下移">⬇ 批量下移</button>
-          <button
-            class="btn btn-sm"
-            :disabled="selectedUids.size === 0 || !otherWorldbook"
-            @click="emitCopyToOther"
-            :title="otherWorldbook ? `复制到 ${otherWorldbook}` : '右侧面板未选择世界书'"
-          >
-            {{ side === 'left' ? '→ 复制到右侧' : '← 复制到左侧' }}
-          </button>
+        <!-- 选中组 -->
+        <div class="action-group">
+          <span class="action-group-label">选中</span>
+          <button class="btn btn-sm" @click="selectByStrategy('constant')">🔵</button>
+          <button class="btn btn-sm" @click="selectByStrategy('selective')">🟢</button>
+          <button class="btn btn-sm" @click="selectByStrategy('vectorized')">🔗</button>
+          <button class="btn btn-sm" @click="showSmartDialog = 'keyword'">🔤</button>
+          <button class="btn btn-sm" @click="showSmartDialog = 'uid-range'">🆔</button>
+        </div>
+
+        <!-- 移动组 -->
+        <div v-if="selectedUids.size > 0" class="action-group">
+          <span class="action-group-label">移动</span>
+          <button class="btn btn-sm" @click="openMoveDialog('up')">⬆ 上移</button>
+          <button class="btn btn-sm" @click="openMoveDialog('down')">⬇ 下移</button>
         </div>
       </div>
     </div>
@@ -373,6 +367,9 @@ const lastClickedUid    = ref<number | null>(null);
 
 // 搜索栏折叠
 const searchExpanded = ref(typeof window !== "undefined" ? window.innerWidth > 768 : true);
+
+// 世界书选择器折叠
+const wbSelectorOpen = ref(false);
 
 // 世界书操作菜单
 const wbMenuOpen = ref(false);

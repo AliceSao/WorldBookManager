@@ -624,6 +624,55 @@ body {
 .wb-menu-danger { color: var(--danger); }
 .wb-menu-danger:hover { background: rgba(212,96,96,0.15); }
 
+/* 世界书选择器切换按钮 */
+.wb-toggle-btn {
+  flex: 1;
+  min-width: 0;
+  background: transparent;
+  border: none;
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: left;
+  padding: 2px 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.wb-toggle-btn:hover { color: var(--accent); }
+.wb-toggle-arrow { font-size: 10px; color: var(--text-muted); flex-shrink: 0; }
+
+/* 世界书选择器面板（折叠区） */
+.wb-selector-panel {
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+/* 操作按钮分组 */
+.action-group {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  flex-wrap: wrap;
+  margin-bottom: 4px;
+}
+.action-group-label {
+  font-size: 9px;
+  color: var(--text-muted);
+  width: 28px;
+  flex-shrink: 0;
+  text-align: right;
+  padding-right: 2px;
+}
+
 /* ─────────── 条目列表 ─────────── */
 .panel-entries {
   flex: 1;
