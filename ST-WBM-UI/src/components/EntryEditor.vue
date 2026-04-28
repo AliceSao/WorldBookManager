@@ -144,3 +144,15 @@ function applyEdit() {
   emit("update", { ...local.value });
 }
 </script>
+
+<style scoped>
+.editor-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 6px;
+  flex-wrap: nowrap;
+  min-width: 0;
+  width: 100%;
+}
+</style>

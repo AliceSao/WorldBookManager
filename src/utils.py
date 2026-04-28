@@ -45,8 +45,8 @@ def validate_field_value(value: Any, field_type: str) -> bool:
 
 
 def load_json_file(file_path: Union[str, Path]) -> dict:
-    """加载JSON文件"""
-    with open(file_path, 'r', encoding='utf-8') as f:
+    """加载JSON文件（自动处理 UTF-8 BOM）"""
+    with open(file_path, 'r', encoding='utf-8-sig') as f:
         return json.load(f)
 
 
@@ -181,10 +181,25 @@ def truncate_string(text: str, max_length: int = 100, suffix: str = '...') -> st
 
 def remove_empty_lines(text: str) -> str:
     """移除空行"""
-    lines = text.split('\n')
+    lines = text.splitlines()
     return '\n'.join(line for line in lines if line.strip())
 
 
 def normalize_whitespace(text: str) -> str:
     """规范化空白字符"""
     return ' '.join(text.split())
+
+
+def natural_sort_key(path: Path) -> list:
+    """
+    自然排序键：按文件名中的数字部分进行数字排序，而非字符串排序。
+    例如：0.txt, 1.txt, 2.txt, 10.txt 而非 0.txt, 1.txt, 10.txt, 2.txt
+
+    Args:
+        path: 文件路径（Path对象）
+
+    Returns:
+        排序键列表
+    """
+    parts = re.split(r'(\d+)', path.stem)
+    return [int(p) if p.isdigit() else p.lower() for p in parts]

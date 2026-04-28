@@ -12,6 +12,7 @@ Batch Operations Module - 批量操作模块
 
 from pathlib import Path
 from typing import Callable, List, Optional
+from utils import natural_sort_key
 
 
 def get_filtered_files(
@@ -59,7 +60,7 @@ def get_filtered_files(
         else:
             selected.append(f)
 
-    return selected
+    return sorted(selected, key=natural_sort_key)
 
 
 def batch_update_files(
@@ -82,7 +83,7 @@ def batch_update_files(
     for f in selected_files:
         try:
             content = f.read_text(encoding="utf-8")
-            lines = content.split("\n")
+            lines = content.splitlines()
             lines = update_fn(lines)
             f.write_text("\n".join(lines), encoding="utf-8")
             updated += 1
@@ -104,6 +105,9 @@ def find_file_by_uid(txt_dir: Path, txt_parser, uid: int) -> Optional[Path]:
     Returns:
         找到则返回 Path，否则返回 None
     """
+    if uid is None:
+        return None
+
     for f in txt_dir.glob("*.txt"):
         try:
             content = f.read_text(encoding="utf-8")

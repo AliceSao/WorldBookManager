@@ -99,6 +99,11 @@ def setup_parser():
     _setup_extract_constant(subparsers)
     _setup_batch_move(subparsers)
     _setup_remove(subparsers)
+    _setup_set_comment(subparsers)
+    _setup_show(subparsers)
+    _setup_remap_uid(subparsers)
+    _setup_clean(subparsers)
+    _setup_edit_content(subparsers)
 
     return parser
 
@@ -128,8 +133,8 @@ def _setup_merge(subparsers):
     p.add_argument("--txt", "-t", required=True, help="TXT 文件路径（目录或通配符）")
     p.add_argument("--output-dir", "-o", help="输出目录（默认: JSON/new/）")
     p.add_argument(
-        "--format", "-f", choices=["new", "old"], default="new",
-        help="输出格式：new（新格式，默认）或 old（旧格式）",
+        "--format", "-f", choices=["new", "old"], default="old",
+        help="输出格式：old（旧格式，默认，兼容ST原生导入）或 new（新格式，需辅助插件导入）",
     )
 
 
@@ -149,7 +154,15 @@ def _setup_list(subparsers):
         "list", aliases=["ls"],
         help="列出 TXT 文件（别名：ls）",
     )
-    p.add_argument("--txt-dir", "-t", help="TXT 目录（默认: TXT/）")
+    p.add_argument("--txt", "-t", help="TXT 目录（默认: TXT/）")
+    p.add_argument("--constant", action="store_true", default=None, help="仅显示蓝灯（Constant）条目")
+    p.add_argument("--no-constant", action="store_true", default=None, help="仅显示非蓝灯条目")
+    p.add_argument("--enabled", action="store_true", default=None, help="仅显示启用条目")
+    p.add_argument("--disabled", action="store_true", default=None, help="仅显示禁用条目")
+    p.add_argument(
+        "--strategy", choices=["constant", "selective", "vectorized"],
+        help="按策略类型筛选",
+    )
 
 
 def _setup_batch_set_uid(subparsers):
@@ -254,8 +267,9 @@ def _setup_extract_by_key(subparsers):
         "extract-by-key", aliases=["ebk"],
         help="根据关键词提取 TXT 文件（别名：ebk）",
     )
-    p.add_argument("source_dir", help="源 TXT 目录")
+    p.add_argument("source_dir", nargs="?", default=None, help="源 TXT 目录（也可用 --txt/-t 指定）")
     p.add_argument("keywords", help='关键词（单个"XX"或多个"XX,YY,ZZ"）')
+    p.add_argument("--txt", "-t", help="源 TXT 目录（与位置参数等效）")
     p.add_argument("--output-dir", "-o", help="输出目录（默认: TXT/extracted/{源目录名}/）")
 
 
@@ -314,8 +328,10 @@ def _setup_extract_constant(subparsers):
         "extract-constant", aliases=["ec"],
         help="提取常量（蓝灯）条目到指定目录（别名：ec）",
     )
-    p.add_argument("source_dir", help="源 TXT 目录")
+    p.add_argument("source_dir", nargs="?", default=None, help="源 TXT 目录（也可用 --txt/-t 指定）")
+    p.add_argument("--txt", "-t", help="源 TXT 目录（与位置参数等效）")
     p.add_argument("--output-dir", "-o", help="输出目录（默认: TXT/constant/{源目录名}/）")
+    p.add_argument("--copy", "-c", action="store_true", help="复制模式（不移动源文件）")
 
 
 def _setup_batch_move(subparsers):
@@ -334,3 +350,67 @@ def _setup_remove(subparsers):
     )
     p.add_argument("path", help="路径（目录或文件）")
     p.add_argument("--recursive", "-r", action="store_true", help="递归删除目录")
+
+
+def _setup_set_comment(subparsers):
+    p = subparsers.add_parser(
+        "set-comment", aliases=["sc"],
+        help="修改条目标题名/Comment（别名：sc）",
+    )
+    p.add_argument("--txt", "-t", required=True, help="TXT 目录")
+    p.add_argument("--uid", "-u", type=int, help="指定 UID（单条目操作，支持替换/追加/清空）")
+    p.add_argument("--uid-start", "-s", type=int, help="起始 UID（批量操作，仅支持追加/清空）")
+    p.add_argument("--uid-end", "-e", type=int, help="结束 UID（批量操作，仅支持追加/清空）")
+    group = p.add_mutually_exclusive_group(required=True)
+    group.add_argument("--set", dest="set_value", help="替换标题名（仅单条目 --uid 模式可用）")
+    group.add_argument("--append", help="在标题名末尾追加文本")
+    group.add_argument("--clear", action="store_true", help="清空标题名")
+
+
+def _setup_show(subparsers):
+    p = subparsers.add_parser(
+        "show", aliases=["sw"],
+        help="查看指定 UID 条目的元数据摘要（别名：sw）",
+    )
+    p.add_argument("--txt", "-t", required=True, help="TXT 目录")
+    p.add_argument("--uid", "-u", type=int, required=True, help="指定 UID")
+
+
+def _setup_remap_uid(subparsers):
+    p = subparsers.add_parser(
+        "remap-uid", aliases=["rmu"],
+        help="UID 重映射（别名：rmu）",
+    )
+    p.add_argument(
+        "--map", "-m", required=True, dest="uid_map",
+        help='UID 映射，格式: "旧UID:新UID,旧UID:新UID" 例如 "12:0,9:1,13:2"',
+    )
+    p.add_argument("--txt", "-t", required=True, help="TXT 目录")
+
+
+def _setup_clean(subparsers):
+    p = subparsers.add_parser(
+        "clean", aliases=["cl"],
+        help="清理拆分/合并产物（别名：cl）",
+    )
+    p.add_argument("--txt", action="store_true", help="清理 TXT 拆分目录")
+    p.add_argument("--json", action="store_true", help="清理 JSON 输出目录")
+    p.add_argument("--all", action="store_true", help="清理全部（TXT + JSON）")
+    p.add_argument("--confirm", "-y", action="store_true", help="跳过确认提示")
+    p.add_argument("--target", help="指定要清理的目录路径（而非使用默认目录）")
+
+
+def _setup_edit_content(subparsers):
+    p = subparsers.add_parser(
+        "edit-content", aliases=["edc"],
+        help="编辑条目的 Content 字段（别名：edc）",
+    )
+    p.add_argument("--txt", "-t", required=True, help="TXT 目录")
+    p.add_argument("--uid", "-u", type=int, help="指定 UID（单条目操作）")
+    p.add_argument("--uid-start", "-s", type=int, help="起始 UID（批量操作）")
+    p.add_argument("--uid-end", "-e", type=int, help="结束 UID（批量操作）")
+    group = p.add_mutually_exclusive_group(required=True)
+    group.add_argument("--prepend", help="在 Content 开头插入文本")
+    group.add_argument("--append", help="在 Content 末尾追加文本")
+    group.add_argument("--replace", nargs=2, metavar=("PATTERN", "REPLACEMENT"),
+                       help="正则替换 Content 中的文本")

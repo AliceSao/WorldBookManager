@@ -793,6 +793,7 @@ body {
   justify-content: center;
   z-index: 2000;
   padding: 16px;
+  min-height: 0;
 }
 
 .smart-dialog {
@@ -804,12 +805,18 @@ body {
   max-width: min(380px, 95vw);
   width: 100%;
   box-shadow: var(--shadow-deep);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-height: 90vh;
+  overflow-y: auto;
 }
 
 .smart-dialog h4 {
   color: var(--accent);
-  margin-bottom: 10px;
+  margin: 0;
   font-size: 13px;
+  text-align: left;
 }
 
 /* UID区间输入组（响应式） */
@@ -871,6 +878,7 @@ body {
   justify-content: center;
   z-index: 1000;
   padding: 16px;
+  min-height: 0;
 }
 
 .batch-dialog {
@@ -882,38 +890,47 @@ body {
   max-width: min(460px, 95vw);
   width: 100%;
   box-shadow: var(--shadow-deep);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-height: 90vh;
+  overflow-y: auto;
 }
 
 .batch-dialog h4 {
-  margin-bottom: 12px;
+  margin: 0;
   color: var(--accent);
   font-size: 14px;
+  text-align: left;
 }
 
 .dialog-warning {
   color: var(--warning);
   font-size: 12px;
-  margin-bottom: 8px;
+  margin: 0;
 }
 
 .dialog-checks, .dialog-effects {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  width: 100%;
 }
 
 .dialog-effects label {
   display: flex;
   align-items: center;
   gap: 8px;
+  width: 100%;
 }
 
 .dialog-actions {
   display: flex;
   gap: 8px;
-  margin-top: 16px;
+  margin: 0;
   justify-content: flex-end;
   flex-wrap: wrap;
+  width: 100%;
 }
 
 /* ─────────── 按钮 ─────────── */
@@ -1146,6 +1163,7 @@ body {
     flex: 1;
     overflow: hidden;
     min-width: 0;
+    min-height: 0;
   }
 
   .wbm-divider { display: none; }
@@ -1155,6 +1173,7 @@ body {
     min-width: 0;
     overflow: hidden;
     display: flex;          /* 默认显示 */
+    min-height: 0;
   }
 
   /* 隐藏非活动面板 */
@@ -1167,6 +1186,9 @@ body {
     flex: 1;
     overflow: hidden;
     min-width: 0;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
   }
 
   /* 条目列表：在固定高度容器内滚动 */
@@ -1175,6 +1197,7 @@ body {
     overflow-y: auto;
     overflow-x: hidden;
     -webkit-overflow-scrolling: touch;
+    min-height: 0;
   }
 
   /* ── 搜索栏 ── */
@@ -1196,6 +1219,7 @@ body {
     -webkit-overflow-scrolling: touch;
     max-height: 44vh;    /* 最多占视口44%，条目区至少有56%可用 */
     flex-shrink: 1;      /* 允许收缩——让条目区先保住空间 */
+    min-height: 0;
   }
 
   /* ── 面板底部折叠按钮（手机端显示） ── */

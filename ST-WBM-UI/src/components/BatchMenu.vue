@@ -333,3 +333,55 @@ async function applyOp() {
   }
 }
 </script>
+
+<style scoped>
+.batch-dialog {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 20px;
+  min-width: 280px;
+  max-width: min(460px, 95vw);
+  width: 100%;
+  box-shadow: var(--shadow-deep);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.batch-dialog h4 {
+  margin: 0;
+  color: var(--accent);
+  font-size: 14px;
+  text-align: left;
+}
+
+.dialog-warning {
+  color: var(--warning);
+  font-size: 12px;
+  margin: 0;
+}
+
+.dialog-checks, .dialog-effects {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+}
+
+.dialog-effects label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.dialog-actions {
+  display: flex;
+  gap: 8px;
+  margin: 0;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  width: 100%;
+}
+</style>

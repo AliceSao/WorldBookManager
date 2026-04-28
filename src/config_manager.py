@@ -1,3 +1,4 @@
+import copy
 import json
 from pathlib import Path
 from typing import Any, Dict, Optional
@@ -71,14 +72,14 @@ class ConfigManager:
             配置字典
         """
         if not self.config_file.exists():
-            return self.default_config.copy()
+            return copy.deepcopy(self.default_config)
         
         try:
             config = load_json_file(self.config_file)
             return self._merge_with_defaults(config)
         except Exception as e:
             print(f"加载配置文件失败: {e}")
-            return self.default_config.copy()
+            return copy.deepcopy(self.default_config)
     
     def save_config(self, config: Dict[str, Any] = None) -> bool:
         """
@@ -160,7 +161,7 @@ class ConfigManager:
     
     def reset_to_defaults(self) -> None:
         """重置为默认配置"""
-        self.config = self.default_config.copy()
+        self.config = copy.deepcopy(self.default_config)
         self.save_config()
     
     def _merge_with_defaults(self, config: Dict[str, Any]) -> Dict[str, Any]:

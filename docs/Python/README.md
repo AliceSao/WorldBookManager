@@ -130,12 +130,12 @@ python main.py merge -n "YouWorldBook" -t TXT/YouWorldBook
 - [完整命令参考](COMMANDS.md)
 - [工作流教程](WORKFLOW.md)
 
-### 命令详细参考（Python CLI）
+### 命令详细参考（Python CLI，共 26 条，v1.1.0）
 
 - [CMD_01 — 转换命令](CMD_01_CONVERSION.md)（split、merge、create、list）
 - [CMD_02 — 批量字段操作](CMD_02_BATCH_FIELDS.md)（bsu、bsn、bso、bsp、bss、bsr、bse、buf）
 - [CMD_03 — 关键字操作](CMD_03_KEYWORDS.md)（add-keywords、remove-keywords、batch-add-keywords 等）
-- [CMD_04 — 文件管理](CMD_04_FILE_MGMT.md)（extract-constant、batch-move、remove）
+- [CMD_04 — 文件管理与编辑](CMD_04_FILE_MGMT.md)（extract-constant、extract-by-key、batch-move、remove、clean、show、remap-uid、edit-content、set-comment）
 
 ### ST-WBM 扩展文档
 

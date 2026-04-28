@@ -32,7 +32,7 @@ class TXTParser:
             解析后的entry字典
         """
         content = load_text_file(file_path)
-        lines = content.split('\n')
+        lines = content.splitlines()
         
         entry = self._build_entry_from_txt(lines)
         
@@ -117,6 +117,14 @@ class TXTParser:
         Returns:
             解析后的值
         """
+        # 字符串字段：空值保留为空字符串而非 None
+        string_fields = ['comment', 'worldbook_filename', 'worldbook_oldname',
+                         'worldbook_newname', 'pathchain']
+        if key.lower() in string_fields:
+            if value.lower() == 'null':
+                return ''
+            return value
+
         if value.lower() == 'null' or value == '':
             return None
         
@@ -136,7 +144,8 @@ class TXTParser:
                 return False
         
         integer_fields = ['uid', 'displayindex', 'selectivelogic', 'position', 
-                          'role', 'depth', 'order', 'probability']
+                          'role', 'depth', 'order', 'probability',
+                          'sticky', 'cooldown', 'delay']
         
         if key.lower() in integer_fields:
             try:
@@ -267,7 +276,7 @@ class TXTParser:
             (WorldBook_OldName, WorldBook_NewName)
         """
         content = load_text_file(file_path)
-        lines = content.split('\n')
+        lines = content.splitlines()
         
         old_name = None
         new_name = None
@@ -354,7 +363,7 @@ class TXTParser:
             UID，提取失败返回None
         """
         try:
-            lines = content.split('\n')
+            lines = content.splitlines()
             for line in lines:
                 if line.strip().startswith('UID:'):
                     uid_str = line.split(':', 1)[1].strip()

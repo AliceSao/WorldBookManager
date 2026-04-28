@@ -1,7 +1,7 @@
-# Python CLI — 第四类：文件管理命令
+# Python CLI — 第四类：文件管理与工具命令
 
-> 这一类命令处理 TXT 文件和目录的物理管理：  
-> 按策略提取特定文件、跨目录批量移动、删除不再需要的文件或目录。  
+> 这一类命令处理 TXT 文件和目录的物理管理，以及高级编辑工具：  
+> 按策略提取特定文件、跨目录批量移动、删除不再需要的文件或目录、快速清理、UID重映射、Content编辑。  
 > 操作直接作用于文件系统，请在执行前确认路径无误。
 
 ---
@@ -10,9 +10,12 @@
 
 | 序号 | 命令 | 别名 | 功能 |
 |------|------|------|------|
-| 19 | `extract-constant` | `ec` | 提取所有常量（蓝灯）条目到指定目录 |
+| 19 | `extract-constant` | `ec` | 提取所有常量（蓝灯）条目到指定目录（支持复制模式） |
 | 20 | `batch-move` | `bm` | 批量移动 TXT 文件（支持通配符） |
 | 21 | `remove` | `rm` | 删除 TXT 文件或目录 |
+| 22 | `clean` | `cl` | 快速清理拆分/合并产物 |
+| 23 | `remap-uid` | `rmu` | UID 重映射（批量重新编号） |
+| 24 | `edit-content` | `edc` | 编辑条目 Content 字段（插入/追加/替换） |
 
 ---
 
@@ -26,16 +29,18 @@
 ### 用法
 
 ```bash
-python main.py extract-constant <源目录> [--output-dir 输出目录]
-python main.py ec               <源目录> [--output-dir 输出目录]
+python main.py extract-constant <源目录> [--output-dir 输出目录] [--copy]
+python main.py ec               -t <TXT目录> [-o 输出目录] [-c]
 ```
 
 ### 参数
 
 | 参数 | 必填 | 说明 |
 |------|------|------|
-| `source_dir` | **是** | 源 TXT 目录 |
+| `source_dir` | 否 | 源 TXT 目录（位置参数，也可用 `--txt -t` 代替） |
+| `--txt` / `-t` | 否 | 源 TXT 目录（与位置参数等效） |
 | `--output-dir` / `-o` | 否 | 输出目录；默认 `TXT/constant/{源目录名}/` |
+| `--copy` / `-c` | 否 | 复制模式（不移动源文件） |
 
 ### 筛选条件
 
@@ -43,19 +48,20 @@ python main.py ec               <源目录> [--output-dir 输出目录]
 
 ### 输出
 
-- 将匹配文件**复制**（不移动）到输出目录
+- 默认将匹配文件**移动**到输出目录
+- 使用 `--copy` 时**复制**（保留源文件）
 - 打印提取的文件数量和输出路径
 
 ### 示例
 
 ```bash
-# 提取 TXT/MyWB/ 中所有常量条目
+# 提取（移动模式）
 python main.py ec "TXT/MyWB"
-python main.py extract-constant "TXT/MyWB"
 # → 默认输出到 TXT/constant/MyWB/
 
-# 指定输出目录
-python main.py ec "TXT/MyWB" -o "TXT/AlwaysOn"
+# 复制模式（推荐，不影响源目录）
+python main.py ec -t "TXT/MyWB" -c
+python main.py ec "TXT/MyWB" --copy -o "TXT/AlwaysOn"
 ```
 
 ### 使用场景
@@ -153,6 +159,120 @@ python main.py rm "TXT/MyWB" -r
 
 ---
 
+## 22. `clean` — 快速清理临时文件
+
+**别名：** `cl`
+
+快速清理拆分/合并过程产生的目录和文件，支持确认提示。
+
+### 用法
+
+```bash
+python main.py clean [--txt] [--json] [--all] [--target <目录>] [-y]
+python main.py cl --target "TXT/OldData" -y
+```
+
+### 参数
+
+| 参数 | 必填 | 说明 |
+|------|------|------|
+| `--txt` | 否 | 清理 TXT 子目录 |
+| `--json` | 否 | 清理 JSON/new 目录 |
+| `--all` | 否 | 清理全部（TXT + JSON） |
+| `--target` | 否 | 指定要清理的具体目录路径 |
+| `--confirm` / `-y` | 否 | 跳过确认提示 |
+
+### 示例
+
+```bash
+# 清理指定目录（跳过确认）
+python main.py cl --target "TXT/_test_wb" -y
+
+# 清理所有 TXT 子目录（需确认）
+python main.py cl --txt
+
+# 清理全部
+python main.py cl --all -y
+```
+
+---
+
+## 23. `remap-uid` — UID 重映射
+
+**别名：** `rmu`
+
+批量重新映射条目的 UID。同步更新文件内的 UID、DisplayIndex、WorldBook_FileName 三个字段，并重命名文件。
+自动处理命名冲突（通过临时目录），出错时自动回滚。
+
+### 用法
+
+```bash
+python main.py remap-uid -t <TXT目录> --map "旧UID:新UID,旧UID:新UID"
+python main.py rmu -t <TXT目录> -m "12:0,9:1,13:2"
+```
+
+### 参数
+
+| 参数 | 必填 | 说明 |
+|------|------|------|
+| `--txt` / `-t` | **是** | TXT 文件目录 |
+| `--map` / `-m` | **是** | UID 映射字符串（`旧:新` 逗号分隔） |
+
+### 示例
+
+```bash
+# 将 UID 12→0, 9→1, 13→2
+python main.py rmu -t "TXT/MyWB" -m "12:0,9:1,13:2"
+
+# 互换两个 UID
+python main.py rmu -t "TXT/MyWB" -m "3:99,5:3,99:5"
+```
+
+### 注意事项
+
+- 新 UID 不可重复
+- 操作会同步更新 UID、DisplayIndex 和文件名
+- 出错时文件自动从临时目录恢复
+
+---
+
+## 24. `edit-content` — 编辑 Content 字段
+
+**别名：** `edc`
+
+编辑条目的 Content 多行字段。支持在开头插入（prepend）、末尾追加（append）、正则替换（replace）三种互斥模式。
+支持单条目（`--uid`）和批量（`--uid-start`/`--uid-end`）操作。
+
+### 用法
+
+```bash
+python main.py edit-content -t <TXT目录> -u <UID> --prepend "文本"
+python main.py edc -t <TXT目录> -s <起始UID> -e <结束UID> --append "文本"
+python main.py edc -t <TXT目录> -u <UID> --replace "正则" "替换"
+```
+
+### 参数
+
+| 参数 | 必填 | 说明 |
+|------|------|------|
+| `--txt` / `-t` | **是** | TXT 文件目录 |
+| `--uid` / `-u` | 否 | 指定 UID（单条目） |
+| `--uid-start` / `-s` | 否 | 起始 UID（批量） |
+| `--uid-end` / `-e` | 否 | 结束 UID（批量） |
+| `--prepend` | 互斥 | 在 Content 开头插入文本 |
+| `--append` | 互斥 | 在 Content 末尾追加文本 |
+| `--replace` | 互斥 | 正则替换（两个参数：模式 替换文本） |
+
+### 示例
+
+```bash
+python main.py edc -t "TXT/MyWB" -u 0 --prepend "[重要]"
+python main.py edc -t "TXT/MyWB" -s 1 -e 10 --append "--- END ---"
+python main.py edc -t "TXT/MyWB" -u 5 --replace "旧文本" "新文本"
+```
+
+---
+
 ## 典型使用场景
 
 ### 场景一：归档旧世界书
@@ -191,12 +311,13 @@ python main.py mg -n "LargeWB_Protagonist" -t "TXT/LargeWB_Protagonist"
 ### 场景三：清理临时文件
 
 ```bash
-# 删除 TMP 目录中的临时模板
-python main.py rm "TXT/TMP" -r
+# 使用 clean 命令快速清理（推荐）
+python main.py cl --target "TXT/TMP" -y
+python main.py cl --all -y
 
-# 删除提取操作生成的临时目录
+# 也可以用 rm 逐个删除
+python main.py rm "TXT/TMP" -r
 python main.py rm "TXT/extracted" -r
-python main.py rm "TXT/constant" -r
 ```
 
 ---

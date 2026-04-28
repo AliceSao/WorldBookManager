@@ -90,37 +90,11 @@ class JSONParser:
         
         if isinstance(entries_data, dict):
             for uid, entry in entries_data.items():
-                entry['uid'] = int(uid)
-                entries.append(entry)
+                entry_copy = {**entry, 'uid': int(uid)}
+                entries.append(entry_copy)
         elif isinstance(entries_data, list):
             for entry in entries_data:
-                entries.append(entry)
-        
-        return entries
-    
-    def extract_entry_with_original_fields(self, data: Dict[str, Any]) -> List[Dict[str, Any]]:
-        """
-        提取所有entries并保留原始字段（包括旧格式字段，支持新旧格式）
-        
-        Args:
-            data: JSON数据
-            
-        Returns:
-            entries列表（保留所有原始字段）
-        """
-        if 'entries' not in data:
-            return []
-        
-        entries_data = data['entries']
-        entries = []
-        
-        if isinstance(entries_data, dict):
-            for uid, entry in entries_data.items():
-                entry['uid'] = int(uid)
-                entries.append(entry)
-        elif isinstance(entries_data, list):
-            for entry in entries_data:
-                entries.append(entry)
+                entries.append({**entry})
         
         return entries
     

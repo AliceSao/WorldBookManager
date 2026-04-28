@@ -83,17 +83,28 @@ python main.py cr -n "地名条目" -d TXT/YouWorldBook
 
 ### `list` / `ls` — 列出 TXT 文件
 
-列出指定目录中的所有 TXT 条目文件及基本信息。
+列出指定目录中的所有 TXT 条目文件及基本信息。支持按策略、启用状态等条件筛选。
 
 ```bash
-python main.py list [-t <目录>]
+python main.py list [-t <目录>] [--constant] [--no-constant] [--enabled] [--disabled] [--strategy <策略>]
 ```
+
+| 参数 | 说明 |
+|------|------|
+| `-t <目录>` | TXT 文件目录（默认 `TXT/`）|
+| `--constant` | 仅显示常量（蓝灯）条目 |
+| `--no-constant` | 仅显示非常量条目 |
+| `--enabled` | 仅显示启用的条目 |
+| `--disabled` | 仅显示禁用的条目 |
+| `--strategy <策略>` | 按激活策略筛选（constant / selective / vectorized）|
 
 **示例**：
 
 ```bash
 python main.py ls
 python main.py ls -t TXT/YouWorldBook
+python main.py ls -t TXT/YouWorldBook --constant
+python main.py ls -t TXT/YouWorldBook --enabled --strategy selective
 ```
 
 ---
@@ -406,13 +417,16 @@ python main.py bck -t TXT/YouWorldBook -s 1 -e 10
 将包含指定关键字的条目提取（复制）到新目录。
 
 ```bash
-python main.py extract-by-key <keyword> [-t <目录>] [-o <输出目录>]
+python main.py extract-by-key <keyword> [source_dir] [-t <目录>] [-o <输出目录>]
 ```
+
+> `source_dir` 位置参数和 `--txt -t` 均可指定源目录，二者等效。
 
 **示例**：
 
 ```bash
 python main.py ebk "炭治郎" -t TXT/YouWorldBook
+python main.py ebk "龙" TXT/YouWorldBook -o TXT/Dragon/
 python main.py ebk "龙" -t TXT/YouWorldBook -o TXT/Dragon/
 ```
 
@@ -420,17 +434,115 @@ python main.py ebk "龙" -t TXT/YouWorldBook -o TXT/Dragon/
 
 ### `extract-constant` / `ec` — 提取常量（蓝灯）条目
 
-将目录中所有 Strategy 为 `constant` 的条目提取到新目录。
+将目录中所有 Strategy 为 `constant` 的条目提取到新目录。支持复制模式（`--copy`）。
 
 ```bash
-python main.py extract-constant <source_dir> [-o <输出目录>]
+python main.py extract-constant <source_dir> [-o <输出目录>] [--copy]
+python main.py ec -t <TXT目录> [-o <输出目录>] [-c]
 ```
 
 **示例**：
 
 ```bash
 python main.py ec TXT/YouWorldBook
+python main.py ec -t TXT/YouWorldBook -c           # 复制模式，不移动源文件
 python main.py ec TXT/YouWorldBook -o TXT/YouWorldBook_constants
+```
+
+---
+
+### `show` / `sw` — 查看条目元数据摘要
+
+查看指定 UID 条目的所有元数据字段和 Content 前 5 行预览。
+
+```bash
+python main.py show -t <TXT目录> -u <UID>
+python main.py sw -t <TXT目录> -u <UID>
+```
+
+**示例**：
+
+```bash
+python main.py sw -t TXT/YouWorldBook -u 0
+```
+
+---
+
+### `set-comment` / `sc` — 修改条目标题名
+
+修改条目的 Comment（标题名）字段。单条目支持替换/追加/清空，批量仅支持追加/清空。
+
+```bash
+# 单条目替换
+python main.py sc -t <TXT目录> -u <UID> --set "新标题名"
+# 批量追加
+python main.py sc -t <TXT目录> -s <起始UID> -e <结束UID> --append "_后缀"
+# 批量清空
+python main.py sc -t <TXT目录> --clear
+```
+
+**示例**：
+
+```bash
+python main.py sc -t TXT/YouWorldBook -u 5 --set "角色：炭治郎"
+python main.py sc -t TXT/YouWorldBook -s 1 -e 20 --append "[已审校]"
+python main.py sc -t TXT/YouWorldBook -s 50 -e 100 --clear
+```
+
+---
+
+### `remap-uid` / `rmu` — UID 重映射
+
+批量重新映射条目的 UID，同步更新 UID、DisplayIndex 和文件名。
+
+```bash
+python main.py remap-uid -t <TXT目录> --map "旧UID:新UID,旧UID:新UID"
+python main.py rmu -t <TXT目录> -m "12:0,9:1,13:2"
+```
+
+**示例**：
+
+```bash
+python main.py rmu -t TXT/YouWorldBook -m "12:0,9:1,13:2"
+```
+
+---
+
+### `clean` / `cl` — 清理临时文件
+
+清理拆分/合并过程产生的临时目录和文件。
+
+```bash
+python main.py clean [--txt] [--json] [--all] [--target <目录>] [-y]
+python main.py cl --target TXT/OldData -y
+```
+
+| 参数 | 说明 |
+|------|------|
+| `--txt` | 清理 TXT 子目录 |
+| `--json` | 清理 JSON/new 目录 |
+| `--all` | 全部清理 |
+| `--target <目录>` | 指定清理目标目录 |
+| `-y` | 跳过确认提示 |
+
+---
+
+### `edit-content` / `edc` — 编辑 Content 字段
+
+编辑条目的 Content 多行字段。支持在开头插入、末尾追加、正则替换三种模式。
+
+```bash
+python main.py edit-content -t <TXT目录> -u <UID> --prepend "文本"
+python main.py edc -t <TXT目录> -s <起始UID> -e <结束UID> --append "文本"
+python main.py edc -t <TXT目录> -u <UID> --replace "正则模式" "替换文本"
+```
+
+**示例**：
+
+```bash
+python main.py edc -t TXT/YouWorldBook -u 0 --prepend "[重要]"
+python main.py edc -t TXT/YouWorldBook -s 1 -e 10 --append "\n--- END ---"
+python main.py edc -t TXT/YouWorldBook -u 5 --replace "旧文本" "新文本"
 ```
 
 ---
@@ -452,9 +564,9 @@ python main.py bss --help
 
 每类命令的详细说明（参数、示例、注意事项）见以下文档：
 
-- [CMD_01 — 转换命令](CMD_01_CONVERSION.md)（split、merge、create、list）
-- [CMD_02 — 批量字段操作](CMD_02_BATCH_FIELDS.md)（bsu、bsn、bso、bsp、bss、bsr、bse、buf）
+- [CMD_01 — 转换与查看](CMD_01_CONVERSION.md)（split、merge、create、list、show）
+- [CMD_02 — 批量字段操作](CMD_02_BATCH_FIELDS.md)（bsu、bsn、bso、bsp、bss、bsr、bse、buf、set-comment）
 - [CMD_03 — 关键字操作](CMD_03_KEYWORDS.md)（add-keywords、remove-keywords、batch-add-keywords 等）
-- [CMD_04 — 文件管理](CMD_04_FILE_MGMT.md)（extract-constant、batch-move、remove）
+- [CMD_04 — 文件管理与工具](CMD_04_FILE_MGMT.md)（extract-constant、batch-move、remove、clean、remap-uid、edit-content）
 
 基本使用流程见：[README.md](README.md) | 实际场景示例见：[WORKFLOW.md](WORKFLOW.md)

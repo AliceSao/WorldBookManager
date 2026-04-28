@@ -32,10 +32,15 @@ Thumbs.db
 *.backup
 
 # npm
+node_modules/
+**/node_modules/
+*/node_modules/
 ST-WBM-UI/node_modules/
 server/ST-WBM-Server/node_modules/
 
 # 世界书数据
+src/OLD/
+src/NEW/
 src/JSON/
 src/TXT/
 
@@ -62,3 +67,9 @@ ReadMe_WB_Manager.md
 
 # 配置
 config/
+
+# 备份文件夹
+backup/
+
+# 临时工作文件夹
+tmp/

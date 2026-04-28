@@ -121,6 +121,7 @@ python main.py mg -n "MyWorldBook" -t "TXT/MyWorldBook" -o "JSON/export"
 - `--name` 和 `--txt` 均为必填参数
 - TXT 目录中的所有 `.txt` 文件都会被处理
 - 若有解析失败的条目，会单独报错并继续处理其余文件
+- **防覆盖机制**：若输出目录下已存在同名 JSON 文件，会自动在文件名后追加时间戳（如 `MyWB_20260428_221530.json`），避免覆盖已确认可用的文件
 
 ---
 
@@ -200,25 +201,28 @@ Content:
 ### 用法
 
 ```bash
-python main.py list [--txt-dir 目录]
-python main.py ls   [--txt-dir 目录]
+python main.py list [--txt 目录] [筛选参数]
+python main.py ls   [-t 目录] [筛选参数]
 ```
 
 ### 参数
 
 | 参数 | 必填 | 说明 |
 |------|------|------|
-| `--txt-dir` / `-t` | 否 | TXT 文件目录；默认为配置中的 `TXT/` |
+| `--txt` / `-t` | 否 | TXT 文件目录；默认为配置中的 `TXT/` |
+| `--constant` | 否 | 仅显示蓝灯（Constant）条目 |
+| `--no-constant` | 否 | 仅显示非蓝灯条目 |
+| `--enabled` | 否 | 仅显示启用条目 |
+| `--disabled` | 否 | 仅显示禁用条目 |
+| `--strategy` | 否 | 按策略类型筛选（`constant` / `selective` / `vectorized`） |
 
-### 输出格式（每个文件）
+### 输出格式
 
 ```
-文件: 42_角色介绍.txt
-  UID:    42
-  注释:   角色介绍
-  旧名称: OriginalWorldBook
-  新名称: MyWorldBook
-  大小:   1.2 KB
+筛选结果: 5 / 187 个文件
+
+  UID   0 |  BLUE  ON | 格式 | 6.02 KB
+  UID   1 |  BLUE  ON | 注意事项 | 1.89 KB
 ```
 
 ### 示例
@@ -229,8 +233,16 @@ python main.py list
 python main.py ls
 
 # 指定目录
-python main.py ls --txt-dir "TXT/MyWorldBook"
 python main.py ls -t "TXT/MyWorldBook"
+
+# 筛选蓝灯条目
+python main.py ls -t "TXT/MyWorldBook" --constant
+
+# 筛选禁用条目
+python main.py ls -t "TXT/MyWorldBook" --disabled
+
+# 组合筛选：蓝灯且禁用
+python main.py ls -t "TXT/MyWorldBook" --constant --disabled
 ```
 
 ---

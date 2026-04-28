@@ -30,6 +30,7 @@ from json_generator import JSONGenerator
 from utils import (
     ensure_directory_exists,
     format_file_size,
+    natural_sort_key,
 )
 from commands import setup_parser
 from batch_ops import (
@@ -66,6 +67,11 @@ COMMAND_ALIASES: dict = {
     "ec":  "extract-constant",
     "bm":  "batch-move",
     "rm":  "remove",
+    "sc":  "set-comment",
+    "sw":  "show",
+    "rmu": "remap-uid",
+    "cl":  "clean",
+    "edc": "edit-content",
 }
 
 
@@ -141,12 +147,11 @@ class WorldBookManager:
         output_name: str,
         txt_files: List[str],
         output_dir: str = None,
-        user_input_name: str = None,
-        format: str = "new",
+        output_format: str = "new",
     ) -> None:
         """合并 TXT 文件为 JSON 世界书"""
         print(f"正在合并世界书: {output_name}")
-        print(f"输入文件数: {len(txt_files)}  输出格式: {format}")
+        print(f"输入文件数: {len(txt_files)}  输出格式: {output_format}")
 
         out_dir = Path(output_dir) if output_dir else self.config.get_directory("json_new")
         ensure_directory_exists(out_dir)
@@ -156,12 +161,17 @@ class WorldBookManager:
             print(f"成功解析 {len(entries)} 个条目")
 
             output_file = out_dir / f"{output_name}.json"
+            if output_file.exists():
+                from datetime import datetime
+                ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+                output_file = out_dir / f"{output_name}_{ts}.json"
+                print(f"目标文件已存在，使用时间戳命名: {output_file.name}")
             metadata = {
                 "name": output_name,
                 "description": f"从 {len(txt_files)} 个 TXT 文件合并",
             }
             self.json_generator.generate_worldbook_json(
-                entries, str(output_file), metadata, format
+                entries, str(output_file), metadata, output_format
             )
             print(f"成功生成 JSON 文件: {output_file}")
 
@@ -197,30 +207,76 @@ class WorldBookManager:
             print(f"创建 TXT 模板失败: {e}")
             traceback.print_exc()
 
-    def list_txt_files(self, txt_dir: str = None) -> None:
-        """列出 TXT 文件"""
+    def list_txt_files(
+        self, txt_dir: str = None,
+        filter_constant: bool = None,
+        filter_no_constant: bool = None,
+        filter_enabled: bool = None,
+        filter_disabled: bool = None,
+        filter_strategy: str = None,
+    ) -> None:
+        """列出 TXT 文件（支持筛选）"""
         dir_path = Path(txt_dir) if txt_dir else self.config.get_directory("txt")
 
         if not dir_path.exists():
             print(f"目录不存在: {dir_path}")
             return
 
-        txt_files = sorted(dir_path.glob("*.txt"))
+        txt_files = sorted(dir_path.glob("*.txt"), key=natural_sort_key)
         if not txt_files:
             print(f"目录中没有 TXT 文件: {dir_path}")
             return
 
-        print(f"找到 {len(txt_files)} 个 TXT 文件:\n")
+        has_filter = any([filter_constant, filter_no_constant, filter_enabled,
+                          filter_disabled, filter_strategy])
+
+        results = []
         for f in txt_files:
+            try:
+                entry = self.txt_parser.parse_txt_file(str(f))
+            except Exception:
+                continue
+
+            # 筛选逻辑
+            is_constant = entry.get("constant", False)
+            is_disabled = entry.get("disable", False)
+            is_selective = entry.get("selective", False)
+            is_vectorized = entry.get("vectorized", False)
+
+            if filter_constant and not is_constant:
+                continue
+            if filter_no_constant and is_constant:
+                continue
+            if filter_enabled and is_disabled:
+                continue
+            if filter_disabled and not is_disabled:
+                continue
+            if filter_strategy:
+                if filter_strategy == "constant" and not is_constant:
+                    continue
+                elif filter_strategy == "selective" and not is_selective:
+                    continue
+                elif filter_strategy == "vectorized" and not is_vectorized:
+                    continue
+
+            results.append((f, entry))
+
+        if has_filter:
+            print(f"筛选结果: {len(results)} / {len(txt_files)} 个文件\n")
+        else:
+            print(f"找到 {len(results)} 个 TXT 文件:\n")
+
+        for f, entry in results:
             info = self.txt_parser.get_txt_file_info(str(f))
             size = format_file_size(info["size"])
-            print(f"文件: {info['name']}")
-            print(f"  UID: {info['uid']}")
-            print(f"  注释: {info['comment']}")
-            print(f"  旧名称: {info['worldbook_old_name'] or '(无)'}")
-            print(f"  新名称: {info['worldbook_new_name'] or '(无)'}")
-            print(f"  大小: {size}")
-            print()
+            uid = entry.get("uid", "?")
+            comment = entry.get("comment", "")
+            is_constant = entry.get("constant", False)
+            is_disabled = entry.get("disable", False)
+            flag = "BLUE" if is_constant else "GREEN"
+            state = "OFF" if is_disabled else "ON"
+            print(f"  UID {uid:>3} | {flag:>5} {state:>3} | {comment} | {size}")
+        print()
 
     # ======================================================================= #
     # batch-set-uid（特殊：按文件排序顺序赋值，不筛选 UID 范围）
@@ -234,7 +290,7 @@ class WorldBookManager:
 
         try:
             uid_list = self._parse_uid_spec(uid_spec)
-            txt_files = sorted(dir_path.glob("*.txt"), key=lambda x: x.name)
+            txt_files = sorted(dir_path.glob("*.txt"), key=natural_sort_key)
 
             if len(uid_list) != len(txt_files):
                 print(
@@ -249,7 +305,7 @@ class WorldBookManager:
                     break
                 try:
                     content = f.read_text(encoding="utf-8")
-                    lines = content.split("\n")
+                    lines = content.splitlines()
                     lines = replace_line_by_prefix(lines, "UID", str(uid_list[i]))
                     f.write_text("\n".join(lines), encoding="utf-8")
                     updated += 1
@@ -264,13 +320,16 @@ class WorldBookManager:
 
     def _parse_uid_spec(self, uid_spec: str) -> List[int]:
         """解析 UID 规格：范围 '1-100' 或列表 '1,7,10,100'"""
-        if "-" in uid_spec:
-            start, end = map(int, uid_spec.split("-", 1))
+        import re
+        # 范围格式：严格匹配 "数字-数字"
+        range_match = re.match(r'^(\d+)-(\d+)$', uid_spec.strip())
+        if range_match:
+            start, end = int(range_match.group(1)), int(range_match.group(2))
             return list(range(start, end + 1))
         elif "," in uid_spec:
             return [int(u.strip()) for u in uid_spec.split(",")]
         else:
-            return [int(uid_spec)]
+            return [int(uid_spec.strip())]
 
     # ======================================================================= #
     # 通用批量字段设置（使用 batch_ops 消除重复）
@@ -422,7 +481,7 @@ class WorldBookManager:
         try:
             keyword_list = [k.strip() for k in keywords.split(",")]
             content = target.read_text(encoding="utf-8")
-            lines = content.split("\n")
+            lines = content.splitlines()
 
             for i, line in enumerate(lines):
                 if line.strip().startswith("Key:"):
@@ -501,7 +560,7 @@ class WorldBookManager:
         try:
             to_remove = {k.strip() for k in keywords.split(",")}
             content = target.read_text(encoding="utf-8")
-            lines = content.split("\n")
+            lines = content.splitlines()
 
             for i, line in enumerate(lines):
                 if line.strip().startswith("Key:"):
@@ -537,7 +596,7 @@ class WorldBookManager:
 
         try:
             content = target.read_text(encoding="utf-8")
-            lines = content.split("\n")
+            lines = content.splitlines()
             lines = replace_line_by_prefix(lines, "Key", "[]")
             target.write_text("\n".join(lines), encoding="utf-8")
             print(f"成功清空 {target.name} 的所有关键字")
@@ -628,9 +687,10 @@ class WorldBookManager:
             print(f"提取失败: {e}")
             traceback.print_exc()
 
-    def extract_constant(self, source_dir: str, output_dir: str = None) -> None:
+    def extract_constant(self, source_dir: str, output_dir: str = None, copy_mode: bool = False) -> None:
         """提取常量（蓝灯）条目到指定目录"""
-        print("正在提取常量（蓝灯）条目")
+        mode_str = "复制" if copy_mode else "移动"
+        print(f"正在提取常量（蓝灯）条目（{mode_str}模式）")
 
         source_path = Path(source_dir)
         if not source_path.exists():
@@ -658,8 +718,11 @@ class WorldBookManager:
 
             print(f"找到 {len(constant_files)} 个常量条目")
             for f in constant_files:
-                shutil.move(str(f), str(out / f.name))
-            print(f"成功移动 {len(constant_files)} 个常量条目到 {out}")
+                if copy_mode:
+                    shutil.copy2(str(f), str(out / f.name))
+                else:
+                    shutil.move(str(f), str(out / f.name))
+            print(f"成功{mode_str} {len(constant_files)} 个常量条目到 {out}")
 
         except Exception as e:
             print(f"提取失败: {e}")
@@ -714,6 +777,366 @@ class WorldBookManager:
             print(f"删除失败: {e}")
             traceback.print_exc()
 
+    # ======================================================================= #
+    # set-comment / show / remap-uid / clean / edit-content（阶段13 新增）
+    # ======================================================================= #
+
+    def set_comment(
+        self, txt_dir: str, uid: int = None,
+        uid_start: int = None, uid_end: int = None,
+        set_value: str = None, append: str = None, clear: bool = False,
+    ) -> None:
+        """修改条目标题名（Comment）"""
+        dir_path = Path(txt_dir)
+        if not dir_path.exists():
+            print(f"错误: 目录不存在 - {txt_dir}")
+            return
+
+        # 替换模式仅限单条目
+        if set_value is not None and uid is None:
+            print("错误: --set（替换）模式必须配合 --uid 指定单条目")
+            return
+
+        # 确定操作文件
+        if uid is not None:
+            target = find_file_by_uid(dir_path, self.txt_parser, uid)
+            if not target:
+                print(f"错误: 未找到 UID 为 {uid} 的 TXT 文件")
+                return
+            files_to_edit = [target]
+        else:
+            files_to_edit = get_filtered_files(dir_path, self.txt_parser, uid_start, uid_end)
+
+        if set_value is not None:
+            print(f"正在替换 UID {uid} 的标题名为: {set_value}")
+        elif append is not None:
+            print(f"正在为 {len(files_to_edit)} 个条目追加标题名: {append}")
+        elif clear:
+            print(f"正在清空 {len(files_to_edit)} 个条目的标题名")
+
+        updated = 0
+        for f in files_to_edit:
+            try:
+                content = f.read_text(encoding="utf-8")
+                lines = content.splitlines()
+                changed = False
+
+                for i, line in enumerate(lines):
+                    if line.strip().startswith("Comment:"):
+                        old_comment = line.split(":", 1)[1].strip()
+                        if set_value is not None:
+                            new_comment = set_value
+                        elif append is not None:
+                            new_comment = old_comment + append
+                        elif clear:
+                            new_comment = ""
+                        else:
+                            break
+                        lines[i] = f"Comment: {new_comment}"
+                        changed = True
+                        break
+
+                if changed:
+                    f.write_text("\n".join(lines), encoding="utf-8")
+                    updated += 1
+            except Exception as e:
+                print(f"  修改失败 {f.name}: {e}")
+
+        print(f"成功修改 {updated} 个文件的标题名")
+
+    def show_entry(self, txt_dir: str, uid: int) -> None:
+        """查看指定 UID 条目的元数据摘要"""
+        dir_path = Path(txt_dir)
+        if not dir_path.exists():
+            print(f"错误: 目录不存在 - {txt_dir}")
+            return
+
+        target = find_file_by_uid(dir_path, self.txt_parser, uid)
+        if not target:
+            print(f"错误: 未找到 UID 为 {uid} 的 TXT 文件")
+            return
+
+        try:
+            entry = self.txt_parser.parse_txt_file(str(target))
+            content = entry.get("content", "")
+            content_lines = content.splitlines()
+            content_preview = "\n".join(content_lines[:5])
+            if len(content_lines) > 5:
+                content_preview += f"\n  ... （共 {len(content_lines)} 行）"
+
+            is_constant = entry.get("constant", False)
+            is_selective = entry.get("selective", False)
+            is_vectorized = entry.get("vectorized", False)
+            strategy = "constant (蓝灯)" if is_constant else "selective (绿灯)" if is_selective else "vectorized" if is_vectorized else "unknown"
+            is_disabled = entry.get("disable", False)
+            keys = entry.get("key", [])
+
+            print(f"文件: {target.name}")
+            print(f"  UID: {entry.get('uid', '?')}")
+            print(f"  Comment: {entry.get('comment', '')}")
+            print(f"  Strategy: {strategy}")
+            print(f"  Disable: {is_disabled}")
+            print(f"  Order: {entry.get('order', 100)}")
+            print(f"  Position: {entry.get('position', 0)}")
+            print(f"  Role: {entry.get('role', 0)}")
+            print(f"  Depth: {entry.get('depth', 0)}")
+            print(f"  Key: {keys} ({len(keys)} 个)")
+            print(f"  Probability: {entry.get('probability', 100)}")
+            print(f"  Content preview:")
+            for line in content_preview.splitlines():
+                print(f"    {line}")
+
+        except Exception as e:
+            print(f"查看失败: {e}")
+            traceback.print_exc()
+
+    def remap_uid(self, uid_map_str: str, txt_dir: str) -> None:
+        """UID 重映射"""
+        dir_path = Path(txt_dir)
+        if not dir_path.exists():
+            print(f"错误: 目录不存在 - {txt_dir}")
+            return
+
+        # 解析映射字符串
+        try:
+            uid_map = {}
+            for pair in uid_map_str.split(","):
+                pair = pair.strip()
+                if ":" not in pair:
+                    print(f"错误: 无效映射格式 '{pair}'，应为 '旧UID:新UID'")
+                    return
+                old_str, new_str = pair.split(":", 1)
+                uid_map[int(old_str.strip())] = int(new_str.strip())
+        except ValueError as e:
+            print(f"错误: UID 必须是整数 - {e}")
+            return
+
+        # 检查新 UID 无重复
+        new_uids = list(uid_map.values())
+        if len(new_uids) != len(set(new_uids)):
+            print("错误: 映射中存在重复的新 UID")
+            return
+
+        print(f"正在重映射 {len(uid_map)} 个 UID:")
+        for old_uid, new_uid in uid_map.items():
+            print(f"  {old_uid} → {new_uid}")
+
+        # 1. 将涉及的文件移到临时目录
+        tmp_dir = dir_path / "_tmp_remap"
+        ensure_directory_exists(tmp_dir)
+
+        try:
+            moved = 0
+            for old_uid in uid_map:
+                target = find_file_by_uid(dir_path, self.txt_parser, old_uid)
+                if target:
+                    shutil.move(str(target), str(tmp_dir / target.name))
+                    moved += 1
+                else:
+                    print(f"  警告: 未找到 UID {old_uid} 的文件，跳过")
+
+            # 2. 修改 UID + DisplayIndex + 重命名
+            renamed = 0
+            for old_uid, new_uid in uid_map.items():
+                # 在临时目录中找文件
+                found = None
+                for f in tmp_dir.glob("*.txt"):
+                    try:
+                        content = f.read_text(encoding="utf-8")
+                        file_uid = self.txt_parser.get_uid_from_content(content)
+                        if file_uid == old_uid:
+                            found = f
+                            break
+                    except Exception:
+                        continue
+
+                if not found:
+                    continue
+
+                content = found.read_text(encoding="utf-8")
+                lines = content.splitlines()
+                lines = replace_line_by_prefix(lines, "UID", str(new_uid))
+                lines = replace_line_by_prefix(lines, "DisplayIndex", str(new_uid))
+
+                # 获取 comment 用于文件名
+                comment = ""
+                for line in lines:
+                    if line.strip().startswith("Comment:"):
+                        comment = line.split(":", 1)[1].strip()
+                        break
+
+                if comment:
+                    from utils import sanitize_filename, truncate_string
+                    safe_comment = sanitize_filename(comment)
+                    safe_comment = truncate_string(safe_comment, 50)
+                    new_filename = f"{new_uid}_{safe_comment}.txt"
+                else:
+                    new_filename = f"{new_uid}.txt"
+
+                # 更新 WorldBook_FileName
+                lines = replace_line_by_prefix(lines, "WorldBook_FileName", new_filename)
+
+                dst = dir_path / new_filename
+                dst.write_text("\n".join(lines), encoding="utf-8")
+                renamed += 1
+
+            # 3. 清理临时目录
+            shutil.rmtree(str(tmp_dir))
+            print(f"成功重映射 {renamed} 个条目")
+
+        except Exception as e:
+            # 出错时尝试恢复
+            if tmp_dir.exists():
+                for f in tmp_dir.glob("*.txt"):
+                    shutil.move(str(f), str(dir_path / f.name))
+                shutil.rmtree(str(tmp_dir), ignore_errors=True)
+            print(f"重映射失败: {e}")
+            traceback.print_exc()
+
+    def clean(self, clean_txt: bool = False, clean_json: bool = False,
+              clean_all: bool = False, confirm: bool = False,
+              target: str = None) -> None:
+        """清理拆分/合并产物"""
+        dirs_to_clean = []
+
+        if target:
+            target_path = Path(target)
+            if target_path.exists():
+                dirs_to_clean.append(target_path)
+            else:
+                print(f"错误: 目标目录不存在 - {target}")
+                return
+        else:
+            if clean_all or clean_txt:
+                txt_dir = self.config.get_directory("txt")
+                if txt_dir.exists():
+                    for sub in txt_dir.iterdir():
+                        if sub.is_dir():
+                            dirs_to_clean.append(sub)
+
+            if clean_all or clean_json:
+                json_new = self.config.get_directory("json_new")
+                if json_new.exists():
+                    dirs_to_clean.append(json_new)
+
+        if not dirs_to_clean:
+            print("没有找到需要清理的目录")
+            return
+
+        print("将要清理以下目录:")
+        total_files = 0
+        for d in dirs_to_clean:
+            count = sum(1 for _ in d.rglob("*") if _.is_file())
+            total_files += count
+            print(f"  {d} ({count} 个文件)")
+
+        if not confirm:
+            try:
+                answer = input(f"\n确认删除以上 {len(dirs_to_clean)} 个目录（共 {total_files} 个文件）？[y/N] ")
+                if answer.strip().lower() not in ("y", "yes"):
+                    print("已取消")
+                    return
+            except (EOFError, KeyboardInterrupt):
+                print("\n已取消")
+                return
+
+        cleaned = 0
+        for d in dirs_to_clean:
+            try:
+                shutil.rmtree(str(d))
+                cleaned += 1
+                print(f"  已删除: {d}")
+            except Exception as e:
+                print(f"  删除失败 {d}: {e}")
+
+        print(f"成功清理 {cleaned} 个目录")
+
+    def edit_content(
+        self, txt_dir: str, uid: int = None,
+        uid_start: int = None, uid_end: int = None,
+        prepend: str = None, append: str = None,
+        replace_args: list = None,
+    ) -> None:
+        """编辑条目的 Content 字段"""
+        import re as re_mod
+
+        dir_path = Path(txt_dir)
+        if not dir_path.exists():
+            print(f"错误: 目录不存在 - {txt_dir}")
+            return
+
+        # 确定操作文件
+        if uid is not None:
+            target = find_file_by_uid(dir_path, self.txt_parser, uid)
+            if not target:
+                print(f"错误: 未找到 UID 为 {uid} 的 TXT 文件")
+                return
+            files_to_edit = [target]
+        else:
+            files_to_edit = get_filtered_files(dir_path, self.txt_parser, uid_start, uid_end)
+
+        print(f"找到 {len(files_to_edit)} 个文件需要编辑 Content")
+
+        # Content 边界检测用的已知字段（与 txt_parser.py 保持一致）
+        known_fields = {
+            'useprobability', 'probability', 'excluderecursion',
+            'preventrecursion', 'delayuntilrecursion', 'sticky',
+            'cooldown', 'delay', 'pathchain', 'extra', 'extensions'
+        }
+
+        updated = 0
+        for f in files_to_edit:
+            try:
+                content = f.read_text(encoding="utf-8")
+                lines = content.splitlines()
+
+                # 找到 Content 的起止行
+                content_start = None
+                content_end = None
+                in_content = False
+
+                for i, line in enumerate(lines):
+                    if line.strip() == "Content:":
+                        content_start = i + 1
+                        in_content = True
+                        continue
+                    if in_content and ":" in line:
+                        potential_key = line.split(":", 1)[0].strip().lower()
+                        if potential_key in known_fields:
+                            content_end = i
+                            in_content = False
+                            break
+                    if line.strip() == "=== End Entry ===":
+                        content_end = i
+                        break
+
+                if content_start is None:
+                    continue
+                if content_end is None:
+                    content_end = len(lines)
+
+                content_lines = lines[content_start:content_end]
+                content_text = "\n".join(content_lines)
+
+                # 执行编辑
+                if prepend:
+                    content_text = prepend + "\n" + content_text
+                elif append:
+                    content_text = content_text + "\n" + append
+                elif replace_args:
+                    pattern, replacement = replace_args
+                    content_text = re_mod.sub(pattern, replacement, content_text)
+
+                # 重建文件
+                new_lines = lines[:content_start] + content_text.splitlines() + lines[content_end:]
+                f.write_text("\n".join(new_lines), encoding="utf-8")
+                updated += 1
+
+            except Exception as e:
+                print(f"  编辑失败 {f.name}: {e}")
+
+        print(f"成功编辑 {updated} 个文件的 Content")
+
 
 # =========================================================================== #
 # 工具函数
@@ -763,14 +1186,21 @@ def main():
         else:
             print(f"错误: 路径不存在 - {args.txt}")
             return
-        manager.merge_worldbook(args.name, txt_files, args.output_dir, None, args.format)
+        manager.merge_worldbook(args.name, txt_files, args.output_dir, args.format)
 
     elif command == "create":
         output_dir = args.output_dir if args.output_dir else "TXT/TMP"
         manager.create_template(args.name, output_dir, args.uid, args.order)
 
     elif command == "list":
-        manager.list_txt_files(args.txt_dir)
+        manager.list_txt_files(
+            args.txt,
+            filter_constant=args.constant,
+            filter_no_constant=args.no_constant,
+            filter_enabled=args.enabled,
+            filter_disabled=args.disabled,
+            filter_strategy=args.strategy,
+        )
 
     elif command == "batch-set-uid":
         manager.batch_set_uid(args.uid_spec, args.txt)
@@ -797,7 +1227,11 @@ def main():
         manager.batch_update_field(args.field_name, args.field_value, args.txt, args.uid_start, args.uid_end)
 
     elif command == "extract-by-key":
-        manager.extract_by_key(args.source_dir, args.keywords, args.output_dir)
+        source = args.source_dir or args.txt
+        if not source:
+            print("错误: 请通过位置参数或 --txt/-t 指定源 TXT 目录")
+            return
+        manager.extract_by_key(source, args.keywords, args.output_dir)
 
     elif command == "add-keywords":
         manager.add_keywords(args.keywords, args.txt, args.uid)
@@ -815,13 +1249,38 @@ def main():
         manager.batch_clear_keywords(args.txt, args.uid_start, args.uid_end)
 
     elif command == "extract-constant":
-        manager.extract_constant(args.source_dir, args.output_dir)
+        source = args.source_dir or args.txt
+        if not source:
+            print("错误: 请通过位置参数或 --txt/-t 指定源 TXT 目录")
+            return
+        manager.extract_constant(source, args.output_dir, args.copy)
 
     elif command == "batch-move":
         manager.batch_move(args.source, args.output_dir)
 
     elif command == "remove":
         manager.remove(args.path, args.recursive)
+
+    elif command == "set-comment":
+        manager.set_comment(
+            args.txt, args.uid, args.uid_start, args.uid_end,
+            args.set_value, args.append, args.clear,
+        )
+
+    elif command == "show":
+        manager.show_entry(args.txt, args.uid)
+
+    elif command == "remap-uid":
+        manager.remap_uid(args.uid_map, args.txt)
+
+    elif command == "clean":
+        manager.clean(args.txt, args.json, args.all, args.confirm, args.target)
+
+    elif command == "edit-content":
+        manager.edit_content(
+            args.txt, args.uid, args.uid_start, args.uid_end,
+            args.prepend, args.append, args.replace,
+        )
 
     else:
         print(f"未知命令: {command}")

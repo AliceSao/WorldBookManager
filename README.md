@@ -1,4 +1,4 @@
-# WorldBook Manager v1.0
+# WorldBook Manager v1.1
 
 > SillyTavern 世界书全套管理工具 — Python CLI + ST 扩展注入 + 后端插件 + 双面板 Web UI
 
@@ -152,14 +152,15 @@ python main.py bak "关键词1,关键词2" -t TXT/YourWorldBook
 python main.py merge -n "YourWorldBook" -t TXT/YourWorldBook
 ```
 
-### Python CLI 命令速查（21 条）
+### Python CLI 命令速查（26 条）
 
 | 命令 | 别名 | 功能 |
 |---|---|---|
 | `split` | `sp` | 拆分 JSON 为 TXT |
 | `merge` | `mg` | 合并 TXT 为 JSON |
 | `create` | `cr` | 创建 TXT 条目模板 |
-| `list` | `ls` | 列出 TXT 文件 |
+| `list` | `ls` | 列出 TXT 文件（支持筛选） |
+| `show` | `sw` | 查看条目元数据摘要 |
 | `batch-set-uid` | `bsu` | 批量设置 UID |
 | `batch-set-newname` | `bsn` | 批量设置世界书名称 |
 | `batch-set-order` | `bso` | 批量设置 Order |
@@ -174,9 +175,13 @@ python main.py merge -n "YourWorldBook" -t TXT/YourWorldBook
 | `remove-keywords` | `rk` | 删除关键字（单条目）|
 | `clear-keywords` | `ck` | 清空关键字（单条目）|
 | `batch-clear-keywords` | `bck` | 批量清空关键字 |
-| `extract-constant` | `ec` | 提取常量（蓝灯）条目 |
+| `extract-constant` | `ec` | 提取常量条目（支持复制模式）|
 | `batch-move` | `bm` | 批量移动 TXT 文件 |
 | `remove` | `rm` | 删除目录或文件 |
+| `clean` | `cl` | 清理拆分/合并产生的临时文件 |
+| `remap-uid` | `rmu` | UID 重映射 |
+| `edit-content` | `edc` | 编辑条目 Content 字段 |
+| `set-comment` | `sc` | 修改条目 Comment/标题 |
 
 ---
 
@@ -186,7 +191,7 @@ python main.py merge -n "YourWorldBook" -t TXT/YourWorldBook
 WorldBookManager/
 ├── src/                    ← Python CLI（离线工具，禁止修改）
 │   ├── main.py             ← 主入口
-│   ├── commands.py         ← 命令定义（21 条）
+│   ├── commands.py         ← 命令定义（26 条）
 │   ├── batch_ops.py        ← 批量操作核心
 │   ├── json_parser.py      ← JSON 解析
 │   ├── json_generator.py   ← JSON 生成
