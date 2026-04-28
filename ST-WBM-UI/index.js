@@ -50,13 +50,24 @@
     document.body.style.overflow = _prevBodyOverflow;
   }
 
-  // ── 统一关闭弹窗（隐藏+解锁滚动+强制刷新ST页面） ──
+  // 标记：本次打开期间是否执行过保存操作
+  let _hadSaveThisSession = false;
+
+  // iframe 内的 Vue SPA 保存后会 postMessage 通知
+  window.addEventListener("message", (ev) => {
+    if (ev.data === "wbm-saved") _hadSaveThisSession = true;
+  });
+
+  // ── 统一关闭弹窗 ──
   function closeModal(overlay) {
     overlay.style.display = "none";
     unlockPageScroll();
-    // 强制刷新页面，确保ST从文件重新加载世界书数据
-    // 防止ST前端缓存的旧数据覆盖后端已保存的新数据
-    window.location.reload();
+    if (_hadSaveThisSession) {
+      _hadSaveThisSession = false;
+      if (window.confirm("检测到世界书已修改并保存。\n是否刷新 ST 以同步最新数据？\n\n点击「确定」刷新，点击「取消」稍后手动刷新。")) {
+        window.location.reload();
+      }
+    }
   }
 
   function openManagerModal() {
@@ -184,6 +195,26 @@
       }
     });
     topBar.appendChild(fsBtn);
+
+    // 手动刷新按钮
+    const refreshBtn = document.createElement("button");
+    refreshBtn.innerHTML = "🔄 同步刷新";
+    refreshBtn.title = "刷新 ST 页面以同步世界书数据";
+    Object.assign(refreshBtn.style, {
+      background: "rgba(20,10,30,0.88)",
+      border: "1px solid rgba(255,255,255,0.28)",
+      borderRadius: "6px",
+      padding: "5px 14px",
+      cursor: "pointer",
+      color: "rgba(255,255,255,0.85)",
+      fontSize: "13px",
+      fontWeight: "600",
+      display: "flex", alignItems: "center", gap: "5px",
+      boxShadow: "0 2px 8px rgba(0,0,0,0.4)",
+      flexShrink: "0",
+    });
+    refreshBtn.addEventListener("click", () => { window.location.reload(); });
+    topBar.appendChild(refreshBtn);
 
     const closeBtn = document.createElement("button");
     closeBtn.innerHTML = "✕ 关闭";

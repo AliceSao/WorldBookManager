@@ -731,6 +731,8 @@ async function save(): Promise<boolean> {
     `保存成功（"${selectedWorldbook.value}"，${localEntries.value.length} 条）`,
     "success"
   );
+  // 通知父窗口（index.js）本次会话有过保存操作
+  try { window.parent.postMessage("wbm-saved", "*"); } catch { /* iframe 安全限制 */ }
   return true;
 }
 
