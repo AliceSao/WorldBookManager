@@ -193,9 +193,28 @@ export async function copyEntries(
 // ST 同步：调用 SillyTavern 原生 API 更新内存缓存
 // ─────────────────────────────────────────────────────────────────────────────
 
+// ─────────────────────────────────────────────────────────────────────────────
+// ST 全局 CSRF Token（与插件 CSRF token 是不同的！）
+// ST 原生 API（/api/worldbooks/edit 等）需要的是 ST 全局 /csrf-token
+// ─────────────────────────────────────────────────────────────────────────────
+
+let _stGlobalCsrf: string | null = null;
+
+async function getStGlobalCsrfToken(): Promise<string | null> {
+  try {
+    const res = await fetch("/csrf-token", { credentials: "include" });
+    if (res.ok) {
+      const data = await res.json();
+      _stGlobalCsrf = data?.token ?? null;
+      return _stGlobalCsrf;
+    }
+  } catch { /* ST 可能未启用 CSRF */ }
+  return null;
+}
+
 /**
  * 将条目同步到 SillyTavern 内存（调用 ST 自身的 /api/worldbooks/edit 端点）
- * 只有通过此端点保存，ST 的运行时状态才会更新，世界书修改才会实时生效。
+ * 使用 ST 全局 CSRF token（非插件 token）
  */
 export async function syncWorldbookToST(
   name: string,
@@ -206,17 +225,33 @@ export async function syncWorldbookToST(
     entriesObj[String(i)] = e;
   });
 
-  const token = await getCsrfToken();
+  // 获取 ST 全局 CSRF token
+  if (!_stGlobalCsrf) await getStGlobalCsrfToken();
+
   const headers: Record<string, string> = { "Content-Type": "application/json" };
-  if (token) headers["X-CSRF-Token"] = token;
+  if (_stGlobalCsrf) headers["X-CSRF-Token"] = _stGlobalCsrf;
 
   try {
-    const res = await fetch("/api/worldbooks/edit", {
+    let res = await fetch("/api/worldbooks/edit", {
       method: "POST",
       headers,
       credentials: "include",
       body: JSON.stringify({ name, data: { entries: entriesObj } }),
     });
+
+    // 403 = token 过期，刷新后重试
+    if (res.status === 403) {
+      _stGlobalCsrf = null;
+      await getStGlobalCsrfToken();
+      if (_stGlobalCsrf) headers["X-CSRF-Token"] = _stGlobalCsrf;
+      res = await fetch("/api/worldbooks/edit", {
+        method: "POST",
+        headers,
+        credentials: "include",
+        body: JSON.stringify({ name, data: { entries: entriesObj } }),
+      });
+    }
+
     return res.ok;
   } catch {
     return false;

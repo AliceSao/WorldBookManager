@@ -39,8 +39,12 @@
       <button v-if="selectedWorldbook" class="btn btn-sm" @click="confirmDeleteWorldbook" title="删除世界书">🗑️</button>
     </div>
 
-    <!-- 搜索栏（含模式切换） -->
+    <!-- 搜索栏（可折叠） -->
     <div class="panel-search">
+      <button class="search-collapse-btn" @click="searchExpanded = !searchExpanded">
+        🔍 搜索与排序 {{ searchExpanded ? '▾' : '▸' }}
+      </button>
+      <div v-show="searchExpanded" class="search-collapsible">
       <div class="search-mode-tabs">
         <button
           v-for="m in searchModes"
@@ -61,14 +65,19 @@
       <div class="sort-row">
         <label class="sort-label">排序：</label>
         <select v-model="sortMode" class="sort-select" @change="applySortMode">
-          <option value="uid-asc">UID ↑</option>
-          <option value="uid-desc">UID ↓</option>
-          <option value="order-asc">Order ↑</option>
-          <option value="order-desc">Order ↓</option>
+          <option value="priority">优先级（Order）</option>
+          <option value="custom">自定义（DisplayIndex）</option>
           <option value="name-asc">标题 A→Z</option>
           <option value="name-desc">标题 Z→A</option>
+          <option value="token">Token（内容长度）</option>
+          <option value="depth">深度</option>
+          <option value="order-asc">Order ↑</option>
+          <option value="order-desc">Order ↓</option>
+          <option value="uid-asc">UID ↑</option>
+          <option value="uid-desc">UID ↓</option>
           <option value="strategy">策略分组</option>
         </select>
+      </div>
       </div>
     </div>
 
@@ -111,9 +120,17 @@
             selected: selectedUids.has(entry.uid),
             disabled: entry.disable,
             expanded: expandedUid === entry.uid,
+            'drag-over': dragOverUid === entry.uid,
           }"
+          draggable="true"
+          @dragstart="onDragStart(entry.uid, $event)"
+          @dragover.prevent="onDragOver(entry.uid)"
+          @dragleave="dragOverUid = null"
+          @drop.prevent="onDrop(entry.uid)"
+          @dragend="dragOverUid = null"
         >
           <div class="entry-main" @click="handleRowClick(entry.uid, $event)">
+            <span class="drag-handle" title="拖动排序">⠿</span>
             <input
               type="checkbox"
               :checked="selectedUids.has(entry.uid)"
@@ -189,9 +206,11 @@
         <div class="panel-actions">
           <button class="btn btn-sm" @click="addEntry" :disabled="!selectedWorldbook">＋ 新建</button>
           <button class="btn btn-sm" @click="duplicateSelected" :disabled="selectedUids.size === 0" title="复制选中的条目">📋 复制选中</button>
-          <button class="btn btn-sm" @click="batchCreate" :disabled="!selectedWorldbook" title="批量创建多条空白条目">
+          <button class="btn btn-sm" @click="openBatchCreate" :disabled="!selectedWorldbook" title="批量创建（可设置模板）">
             ＋＋ 批量新建
           </button>
+          <button class="btn btn-sm" @click="openMoveDialog('up')" :disabled="selectedUids.size === 0" title="批量上移">⬆ 批量上移</button>
+          <button class="btn btn-sm" @click="openMoveDialog('down')" :disabled="selectedUids.size === 0" title="批量下移">⬇ 批量下移</button>
           <button
             class="btn btn-sm"
             :disabled="selectedUids.size === 0 || !otherWorldbook"
@@ -259,6 +278,65 @@
         </template>
       </div>
     </div>
+
+    <!-- 批量创建弹窗 -->
+    <div v-if="showBatchCreateDialog" class="smart-dialog-overlay" @click.self="showBatchCreateDialog = false">
+      <div class="smart-dialog">
+        <h4>＋＋ 批量创建条目</h4>
+        <div class="editor-row">
+          <label class="editor-label">数量</label>
+          <input v-model.number="batchCreateCount" type="number" class="editor-input narrow" min="1" max="100" />
+        </div>
+        <div class="editor-row">
+          <label class="editor-label">策略</label>
+          <select v-model="batchCreateStrategy" class="editor-select">
+            <option value="constant">🔵 常量</option>
+            <option value="selective">🟢 可选</option>
+            <option value="vectorized">🔗 向量化</option>
+          </select>
+        </div>
+        <div class="editor-row">
+          <label class="editor-label">Order</label>
+          <input v-model.number="batchCreateOrder" type="number" class="editor-input narrow" />
+        </div>
+        <div class="editor-row">
+          <label class="editor-label">位置</label>
+          <select v-model.number="batchCreatePosition" class="editor-select">
+            <option :value="0">角色定义之前</option>
+            <option :value="1">角色定义之后</option>
+            <option :value="2">示例消息之前</option>
+            <option :value="3">示例消息之后</option>
+            <option :value="4">固定深度</option>
+            <option :value="5">作者注释之前</option>
+            <option :value="6">作者注释之后</option>
+          </select>
+        </div>
+        <div class="editor-row">
+          <label class="editor-label">关键字</label>
+          <input v-model="batchCreateKeys" class="editor-input" placeholder="逗号分隔，如：关键字1,关键字2" />
+        </div>
+        <div class="dialog-actions">
+          <button class="btn btn-primary btn-sm" @click="doBatchCreate">✅ 创建</button>
+          <button class="btn btn-sm" @click="showBatchCreateDialog = false">取消</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 批量移动弹窗 -->
+    <div v-if="showMoveDialog" class="smart-dialog-overlay" @click.self="showMoveDialog = false">
+      <div class="smart-dialog">
+        <h4>{{ moveDirection === 'up' ? '⬆ 批量上移' : '⬇ 批量下移' }}</h4>
+        <p style="font-size:12px;color:var(--text-muted)">已选 {{ selectedUids.size }} 条条目</p>
+        <div class="editor-row">
+          <label class="editor-label">移动步数</label>
+          <input v-model.number="moveSteps" type="number" class="editor-input narrow" min="1" max="9999" />
+        </div>
+        <div class="dialog-actions">
+          <button class="btn btn-primary btn-sm" @click="doBatchMove">✅ 移动</button>
+          <button class="btn btn-sm" @click="showMoveDialog = false">取消</button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -300,6 +378,51 @@ const isDirty           = ref(false);
 const listRef           = ref<HTMLElement | null>(null);
 const lastClickedUid    = ref<number | null>(null);
 
+// 搜索栏折叠
+const searchExpanded = ref(typeof window !== "undefined" ? window.innerWidth > 768 : true);
+
+// 拖动排序
+const dragUid = ref<number | null>(null);
+const dragOverUid = ref<number | null>(null);
+
+function onDragStart(uid: number, ev: DragEvent) {
+  dragUid.value = uid;
+  if (ev.dataTransfer) {
+    ev.dataTransfer.effectAllowed = "move";
+    ev.dataTransfer.setData("text/plain", String(uid));
+  }
+}
+
+function onDragOver(uid: number) {
+  if (uid !== dragUid.value) dragOverUid.value = uid;
+}
+
+function onDrop(targetUid: number) {
+  dragOverUid.value = null;
+  if (dragUid.value === null || dragUid.value === targetUid) return;
+  const fromIdx = localEntries.value.findIndex(e => e.uid === dragUid.value);
+  const toIdx = localEntries.value.findIndex(e => e.uid === targetUid);
+  if (fromIdx === -1 || toIdx === -1) return;
+  const [entry] = localEntries.value.splice(fromIdx, 1);
+  localEntries.value.splice(toIdx, 0, entry);
+  markDirty();
+  dragUid.value = null;
+}
+
+// 批量创建弹窗
+const showBatchCreateDialog = ref(false);
+const batchCreateCount = ref(5);
+const batchCreateStrategy = ref("selective");
+const batchCreateOrder = ref(100);
+const batchCreatePosition = ref(0);
+const batchCreateKeys = ref("");
+const batchCreateConstant = ref(false);
+
+// 批量移动弹窗
+const showMoveDialog = ref(false);
+const moveDirection = ref<"up" | "down">("up");
+const moveSteps = ref(1);
+
 // 智能选中弹窗
 const showSmartDialog = ref("");
 const smartKeyword    = ref("");
@@ -317,12 +440,16 @@ function applySortMode() {
   const mode = sortMode.value;
   localEntries.value.sort((a, b) => {
     switch (mode) {
-      case "uid-asc": return a.uid - b.uid;
-      case "uid-desc": return b.uid - a.uid;
-      case "order-asc": return a.order - b.order;
-      case "order-desc": return b.order - a.order;
+      case "priority": return a.order - b.order || a.uid - b.uid;
+      case "custom": return a.displayIndex - b.displayIndex;
       case "name-asc": return (a.comment || "").localeCompare(b.comment || "");
       case "name-desc": return (b.comment || "").localeCompare(a.comment || "");
+      case "token": return (b.content || "").length - (a.content || "").length;
+      case "depth": return (a.depth ?? 0) - (b.depth ?? 0) || a.uid - b.uid;
+      case "order-asc": return a.order - b.order;
+      case "order-desc": return b.order - a.order;
+      case "uid-asc": return a.uid - b.uid;
+      case "uid-desc": return b.uid - a.uid;
       case "strategy": {
         const rank = (e: RawEntry) => e.constant ? 0 : e.selective ? 1 : 2;
         return rank(a) - rank(b) || a.uid - b.uid;
@@ -752,35 +879,34 @@ function duplicateSelected() {
 }
 
 // ─────── 批量新建 ───────
-async function batchCreate() {
-  const input = window.prompt(
-    "批量创建设置（格式：数量,策略,order,position）\n" +
-    "策略: constant/selective/vectorized\n" +
-    "例: 5,constant,999,6\n" +
-    "只输入数字则用默认模板",
-    "5"
-  );
-  if (input === null) return;
-  const parts = input.split(",").map((s) => s.trim());
-  const count = Math.max(1, Math.min(100, parseInt(parts[0], 10) || 1));
-  const strategyType = parts[1] || "selective";
-  const orderVal = parts[2] ? parseInt(parts[2], 10) : 100;
-  const posVal = parts[3] ? parseInt(parts[3], 10) : 0;
+function openBatchCreate() {
+  batchCreateCount.value = 5;
+  batchCreateStrategy.value = "selective";
+  batchCreateOrder.value = 100;
+  batchCreatePosition.value = 0;
+  batchCreateKeys.value = "";
+  showBatchCreateDialog.value = true;
+}
 
+async function doBatchCreate() {
+  const count = Math.max(1, Math.min(100, batchCreateCount.value || 1));
+  const s = batchCreateStrategy.value;
+  const keys = batchCreateKeys.value.split(",").map(k => k.trim()).filter(Boolean);
   const template: Partial<RawEntry> = {
-    constant: strategyType === "constant",
-    selective: strategyType === "selective",
-    vectorized: strategyType === "vectorized",
-    order: orderVal,
-    position: posVal as 0|1|2|3|4|5|6,
+    constant: s === "constant",
+    selective: s === "selective",
+    vectorized: s === "vectorized",
+    order: batchCreateOrder.value,
+    position: batchCreatePosition.value as 0|1|2|3|4|5|6,
+    key: keys,
   };
-
+  showBatchCreateDialog.value = false;
   const overrides = Array.from({ length: count }, () => ({ ...template }));
   const res = await addEntries(selectedWorldbook.value, overrides);
   if (res.success && res.data) {
     await loadWorldbook();
     await syncWorldbookToST(selectedWorldbook.value, localEntries.value);
-    emit("status", `已创建 ${count} 条条目（策略:${strategyType}, Order:${orderVal}）`, "success");
+    emit("status", `已创建 ${count} 条条目`, "success");
   } else {
     emit("status", `批量创建失败：${res.message}`, "error");
   }
@@ -825,11 +951,39 @@ async function batchDelete() {
 function moveEntry(uid: number, direction: number) {
   const idx = localEntries.value.findIndex((e) => e.uid === uid);
   if (idx === -1) return;
-  const newIdx = idx + direction;
-  if (newIdx < 0 || newIdx >= localEntries.value.length) return;
+  const newIdx = Math.max(0, Math.min(localEntries.value.length - 1, idx + direction));
+  if (newIdx === idx) return;
   const [entry] = localEntries.value.splice(idx, 1);
   localEntries.value.splice(newIdx, 0, entry);
   markDirty();
+}
+
+function openMoveDialog(dir: "up" | "down") {
+  if (selectedUids.size === 0) return;
+  moveDirection.value = dir;
+  moveSteps.value = 1;
+  showMoveDialog.value = true;
+}
+
+function doBatchMove() {
+  const steps = Math.max(1, moveSteps.value || 1);
+  const dir = moveDirection.value === "up" ? -steps : steps;
+  showMoveDialog.value = false;
+  // 按当前顺序获取选中条目的索引
+  const indices = localEntries.value
+    .map((e, i) => selectedUids.has(e.uid) ? i : -1)
+    .filter(i => i !== -1);
+  if (dir < 0) indices.sort((a, b) => a - b); // 上移：从上往下处理
+  else indices.sort((a, b) => b - a);          // 下移：从下往上处理
+  for (const idx of indices) {
+    const newIdx = Math.max(0, Math.min(localEntries.value.length - 1, idx + dir));
+    if (newIdx !== idx) {
+      const [entry] = localEntries.value.splice(idx, 1);
+      localEntries.value.splice(newIdx, 0, entry);
+    }
+  }
+  markDirty();
+  emit("status", `已${moveDirection.value === "up" ? "上" : "下"}移 ${indices.length} 条条目 ${steps} 步`, "success");
 }
 
 // ─────── 复制到对侧 ───────

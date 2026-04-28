@@ -1,5 +1,10 @@
 <template>
-  <div class="entry-editor">
+  <div class="entry-editor" :class="{ 'editor-fullscreen': isFullscreen }">
+    <div class="editor-toolbar">
+      <button class="btn btn-sm" @click="isFullscreen = !isFullscreen" :title="isFullscreen ? '退出全屏' : '全屏编辑'">
+        {{ isFullscreen ? '⛶ 退出全屏' : '⛶ 全屏编辑' }}
+      </button>
+    </div>
     <div class="editor-row">
       <label class="editor-label">UID</label>
       <input v-model.number="local.uid" type="number" class="editor-input narrow" min="0" />
@@ -135,6 +140,7 @@ const emit = defineEmits<{
 const local = ref<RawEntry>({ ...props.entry, key: [...props.entry.key] });
 const newKey = ref("");
 const showContentModal = ref(false);
+const isFullscreen = ref(false);
 const contentModalTextareaRef = ref<HTMLTextAreaElement | null>(null);
 
 function openContentModal() {
@@ -188,6 +194,28 @@ function applyEdit() {
   flex-wrap: nowrap;
   min-width: 0;
   width: 100%;
+}
+
+/* 全屏编辑模式 */
+.editor-fullscreen {
+  position: fixed !important;
+  top: 0; left: 0;
+  width: 100vw !important;
+  height: 100vh !important;
+  height: 100dvh !important;
+  z-index: 99998;
+  background: var(--bg, #0b1929);
+  overflow-y: auto;
+  padding: 12px;
+  box-sizing: border-box;
+  border-radius: 0 !important;
+  border: none !important;
+}
+
+.editor-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 6px;
 }
 
 .content-edit-wrap {
