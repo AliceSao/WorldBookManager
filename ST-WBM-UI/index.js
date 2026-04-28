@@ -122,8 +122,7 @@
       position: "fixed",
       top: "0", left: "0",
       width: "100vw",
-      height: "100vh",                  // fallback
-      height: "100dvh",                 // 优先：动态视口高度，规避 iOS Safari 100vh 陷阱
+      height: "100vh",
       background: "rgba(0,0,0,0.78)",
       display: "flex",
       flexDirection: "column",
@@ -136,6 +135,9 @@
       transform: "none",
       willChange: "auto",
     });
+
+    // dvh fallback：浏览器支持则覆盖 100vh
+    try { overlay.style.height = "100dvh"; } catch { /* 不支持 dvh，保持 100vh */ }
 
     const modalWidth = isMobile ? "100%" : "min(1440px, 96vw)";
 

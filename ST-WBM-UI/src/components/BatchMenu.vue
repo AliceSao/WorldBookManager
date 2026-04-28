@@ -303,9 +303,9 @@ async function applyOp() {
     });
   } else if (curOp === "effect") {
     await runOp("effect", {
-      sticky: v.sticky ?? null,
-      cooldown: v.cooldown ?? null,
-      delay: v.delay ?? null,
+      sticky: (v.sticky === "" || v.sticky == null) ? null : Number(v.sticky),
+      cooldown: (v.cooldown === "" || v.cooldown == null) ? null : Number(v.cooldown),
+      delay: (v.delay === "" || v.delay == null) ? null : Number(v.delay),
     });
   } else if (curOp === "group-weight") await runOp("group-weight", { groupWeight: v.numVal ?? 100 });
   else if (curOp === "char-filter") {

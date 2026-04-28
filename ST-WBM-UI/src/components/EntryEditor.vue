@@ -137,7 +137,7 @@ const emit = defineEmits<{
   (e: "cancel"): void;
 }>();
 
-const local = ref<RawEntry>({ ...props.entry, key: [...props.entry.key] });
+const local = ref<RawEntry>(JSON.parse(JSON.stringify(props.entry)));
 const newKey = ref("");
 const showContentModal = ref(false);
 const isFullscreen = ref(false);
@@ -152,7 +152,7 @@ function closeContentModal() {
   showContentModal.value = false;
 }
 
-watch(() => props.entry, (v) => { local.value = { ...v, key: [...v.key] }; });
+watch(() => props.entry, (v) => { local.value = JSON.parse(JSON.stringify(v)); });
 
 const strategy = computed({
   get() {

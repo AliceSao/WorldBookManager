@@ -39,13 +39,7 @@
             </button>
           </div>
         </div>
-        <input
-          ref="fileInputRef"
-          type="file"
-          accept=".json"
-          style="display:none"
-          @change="importFromFile"
-        />
+
       </div>
     </nav>
 

@@ -12,7 +12,7 @@ const BASE = "/api/plugins/wb-manager";
 interface ApiResponse<T = null> {
   success: boolean;
   message: string;
-  data: T;
+  data: T | null;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

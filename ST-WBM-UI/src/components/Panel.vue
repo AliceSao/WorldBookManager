@@ -331,7 +331,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, reactive, nextTick, onMounted, onUnmounted } from "vue";
+import { ref, computed, reactive, nextTick, onMounted, onUnmounted, watch } from "vue";
 import EntryEditor from "./EntryEditor.vue";
 import BatchMenu from "./BatchMenu.vue";
 import type { RawEntry } from "../utils/worldbook";
@@ -358,6 +358,10 @@ const emit = defineEmits<{
 
 // ─────── 状态 ───────
 const selectedWorldbook = ref("");
+let _prevWorldbook = "";
+
+// 追踪上一次选中的世界书名（用于取消切换时恢复）
+watch(selectedWorldbook, (_new, old) => { _prevWorldbook = old; });
 const localEntries      = ref<RawEntry[]>([]);
 const loading           = ref(false);
 const searchQuery       = ref("");
@@ -536,15 +540,14 @@ async function loadWorldbook() {
   }
   // 切换前检查：如果有未保存的修改，弹窗提示
   if (isDirty.value) {
-    const prev = localEntries.value.length > 0 ? selectedWorldbook.value : "";
     const action = window.confirm(
       "当前有未保存的修改，是否放弃修改并切换？\n点击「确定」放弃修改，点击「取消」留在当前页面。"
     );
     if (!action) {
-      // 恢复 select 值（v-model 已经变了，需要回退）
-      const target = selectedWorldbook.value;
+      // v-model 已变更，需用 _prevWorldbook 恢复
+      const restore = _prevWorldbook;
       selectedWorldbook.value = "";
-      nextTick(() => { selectedWorldbook.value = prev || target; });
+      nextTick(() => { selectedWorldbook.value = restore; });
       return;
     }
     isDirty.value = false;
@@ -654,8 +657,11 @@ async function importFromFile(ev: Event) {
     const data = JSON.parse(text);
     const entries = data.entries;
     if (!entries) { emit("status", "JSON 格式无效：缺少 entries", "error"); return; }
-    // 提取条目列表
-    const list: RawEntry[] = Array.isArray(entries) ? entries : Object.values(entries);
+    // 提取并验证条目列表
+    const rawList = Array.isArray(entries) ? entries : Object.values(entries);
+    const list: RawEntry[] = rawList.filter((e: any) =>
+      e && typeof e === "object" && typeof e.content === "string"
+    );
     // 使用文件名（去掉 .json）作为世界书名，或覆盖当前
     const wbName = selectedWorldbook.value || file.name.replace(/\.json$/i, "");
     if (!selectedWorldbook.value) {
@@ -1067,10 +1073,6 @@ function onError(message: string) {
 
 // ─────── 脏标记 ───────
 function markDirty() {
-  if (!isDirty.value) {
-    // 首次标脏时保存一个干净快照，用于回退
-    pushHistory();
-  }
   isDirty.value = true;
   emit("dirty", true);
 }
