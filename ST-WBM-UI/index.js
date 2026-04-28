@@ -50,10 +50,13 @@
     document.body.style.overflow = _prevBodyOverflow;
   }
 
-  // ── 统一关闭弹窗（隐藏+解锁滚动） ──
+  // ── 统一关闭弹窗（隐藏+解锁滚动+强制刷新ST页面） ──
   function closeModal(overlay) {
     overlay.style.display = "none";
     unlockPageScroll();
+    // 强制刷新页面，确保ST从文件重新加载世界书数据
+    // 防止ST前端缓存的旧数据覆盖后端已保存的新数据
+    window.location.reload();
   }
 
   function openManagerModal() {
