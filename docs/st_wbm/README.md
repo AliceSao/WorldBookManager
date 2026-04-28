@@ -76,7 +76,7 @@ cp -r ST-WBM-UI <ST数据目录>/extensions/third-party/ST-WBM-UI
 - [Python CLI 完整命令参考](../Python/COMMANDS.md)
 - [Python CLI 工作流教程](../Python/WORKFLOW.md)
 
-  ***
+---
 
 ## 技术栈
 
