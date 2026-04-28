@@ -194,73 +194,79 @@ export async function copyEntries(
 // ─────────────────────────────────────────────────────────────────────────────
 
 // ─────────────────────────────────────────────────────────────────────────────
-// ST 全局 CSRF Token（与插件 CSRF token 是不同的！）
-// ST 原生 API（/api/worldbooks/edit 等）需要的是 ST 全局 /csrf-token
+// ST 原生同步（使用 SillyTavern 提供的稳定接口）
 // ─────────────────────────────────────────────────────────────────────────────
 
-let _stGlobalCsrf: string | null = null;
+/** ST 上下文类型（简化声明，完整类型见 @types/iframe/exported.sillytavern.d.ts） */
+interface STContext {
+  getRequestHeaders: () => Record<string, string>;
+  loadWorldInfo: (name: string) => Promise<any | null>;
+  saveWorldInfo: (name: string, data: any, immediately?: boolean) => Promise<void>;
+  reloadWorldInfoEditor?: (file: string, loadIfNotSelected?: boolean) => void;
+  updateWorldInfoList?: () => Promise<void>;
+}
 
-async function getStGlobalCsrfToken(): Promise<string | null> {
+/** 获取 ST 上下文（从 iframe 的 parent window 获取） */
+function getSTContext(): STContext | null {
   try {
-    const res = await fetch("/csrf-token", { credentials: "include" });
-    if (res.ok) {
-      const data = await res.json();
-      _stGlobalCsrf = data?.token ?? null;
-      return _stGlobalCsrf;
-    }
-  } catch { /* ST 可能未启用 CSRF */ }
+    const st = (window.parent as any)?.SillyTavern;
+    if (st?.getRequestHeaders) return st as STContext;
+    const st2 = (window as any)?.SillyTavern;
+    if (st2?.getRequestHeaders) return st2 as STContext;
+  } catch { /* cross-origin，无法访问 */ }
   return null;
 }
 
 /**
- * 将条目同步到 SillyTavern 内存（调用 ST 自身的 /api/worldbooks/edit 端点）
- * 使用 ST 全局 CSRF token（非插件 token）
+ * 将条目同步到 SillyTavern 内存。
+ * 优先使用 ST 原生 saveWorldInfo API；
+ * 降级为 HTTP 调用 /api/worldbooks/edit（携带 ST 的 CSRF token）。
  */
 export async function syncWorldbookToST(
   name: string,
   entries: RawEntry[]
 ): Promise<boolean> {
+  const st = getSTContext();
+
+  // ── 方案1：使用 ST 原生 loadWorldInfo + saveWorldInfo ──
+  if (st?.loadWorldInfo && st?.saveWorldInfo) {
+    try {
+      // 加载当前世界书数据结构
+      const data = await st.loadWorldInfo(name);
+      if (data) {
+        // 用新条目替换 entries
+        const entriesObj: Record<string, RawEntry> = {};
+        entries.forEach((e, i) => { entriesObj[String(i)] = e; });
+        data.entries = entriesObj;
+        await st.saveWorldInfo(name, data, true);
+        // 刷新原生编辑器
+        try { st.reloadWorldInfoEditor?.(name); } catch { /* 静默 */ }
+        try { await st.updateWorldInfoList?.(); } catch { /* 静默 */ }
+        return true;
+      }
+    } catch { /* 降级到方案2 */ }
+  }
+
+  // ── 方案2：HTTP 调用，使用 ST 的 getRequestHeaders 获取正确的 CSRF token ──
   const entriesObj: Record<string, RawEntry> = {};
-  entries.forEach((e, i) => {
-    entriesObj[String(i)] = e;
-  });
+  entries.forEach((e, i) => { entriesObj[String(i)] = e; });
 
-  // 获取 ST 全局 CSRF token
-  if (!_stGlobalCsrf) await getStGlobalCsrfToken();
-
-  const headers: Record<string, string> = { "Content-Type": "application/json" };
-  if (_stGlobalCsrf) headers["X-CSRF-Token"] = _stGlobalCsrf;
+  let headers: Record<string, string> = { "Content-Type": "application/json" };
+  if (st?.getRequestHeaders) {
+    try { headers = { ...st.getRequestHeaders() }; } catch { /* 使用默认 headers */ }
+  }
 
   try {
-    let res = await fetch("/api/worldbooks/edit", {
+    const res = await fetch("/api/worldbooks/edit", {
       method: "POST",
       headers,
       credentials: "include",
       body: JSON.stringify({ name, data: { entries: entriesObj } }),
     });
-
-    // 403 = token 过期，刷新后重试
-    if (res.status === 403) {
-      _stGlobalCsrf = null;
-      await getStGlobalCsrfToken();
-      if (_stGlobalCsrf) headers["X-CSRF-Token"] = _stGlobalCsrf;
-      res = await fetch("/api/worldbooks/edit", {
-        method: "POST",
-        headers,
-        credentials: "include",
-        body: JSON.stringify({ name, data: { entries: entriesObj } }),
-      });
-    }
-
     if (res.ok) {
-      // 额外：通知 ST 重新加载世界书选择器（刷新原生编辑器视图）
-      try {
-        // 通过 ST 的 eventSource 触发 WORLDINFO_UPDATED 事件（如果可用）
-        const stWindow = window.parent as any;
-        if (stWindow?.eventSource && stWindow?.event_types?.WORLDINFO_UPDATED) {
-          stWindow.eventSource.emit(stWindow.event_types.WORLDINFO_UPDATED);
-        }
-      } catch { /* 事件总线不可用，静默 */ }
+      // 刷新原生编辑器
+      try { st?.reloadWorldInfoEditor?.(name); } catch { /* 静默 */ }
+      try { await st?.updateWorldInfoList?.(); } catch { /* 静默 */ }
     }
     return res.ok;
   } catch {

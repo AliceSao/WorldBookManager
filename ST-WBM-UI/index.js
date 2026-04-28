@@ -270,13 +270,21 @@
       log("面板已存在，跳过重复注入");
       return;
     }
-    const settingsContainer = document.getElementById("extensions_settings") ||
+    // ST 扩展面板容器——尝试多种已知选择器
+    const settingsContainer =
+      document.getElementById("extensions_settings") ||
+      document.getElementById("extensions_settings2") ||
+      document.getElementById("extension_settings") ||
+      document.querySelector("#extensions_settings") ||
       document.querySelector(".extensions_settings") ||
-      document.querySelector("#extension_settings");
+      document.querySelector('[id*="extensions_settings"]') ||
+      document.querySelector("#top-settings-holder") ||
+      document.querySelector(".extensions_block");
     if (!settingsContainer) {
-      log("未找到 extensions_settings 容器，跳过面板注入");
+      log("未找到扩展设置容器，跳过面板注入");
       return;
     }
+    log("注入到容器: " + (settingsContainer.id || settingsContainer.className));
 
     const collapsed = localStorage.getItem(STORAGE_KEY) !== "false";
     const panel = document.createElement("div");
@@ -365,9 +373,12 @@
     log("初始化完成");
   }
 
-  if (typeof jQuery !== "undefined") {
-    jQuery(init);
-  } else {
+  // ST 通过 import() 加载扩展 JS，此时 DOM 已就绪
+  // 但设置面板可能还未渲染，所以 init() 内有 MutationObserver 兜底
+  if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", init);
+  } else {
+    // DOM 已就绪，直接初始化（可能需要等 ST 渲染设置面板）
+    setTimeout(init, 100);
   }
 })();
