@@ -44,17 +44,12 @@ src/NEW/
 src/JSON/
 src/TXT/
 
-# 构建相关
+# 构建相关（Python CLI 不再提供编译版本）
 build/
+dist/
 *.spec
 build.bat
 build.sh
-
-# dist目录（仅放行wbm.exe）
-dist/*
-!dist/wbm.exe
-
-# 打包缓存
 *.toc
 *.zip
 *.pkg
