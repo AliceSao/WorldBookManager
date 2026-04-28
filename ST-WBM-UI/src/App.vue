@@ -17,12 +17,11 @@
 
     <!-- 导航栏 -->
     <nav class="wbm-nav">
-      <span class="wbm-title">📖 世界书管理器 <span class="wbm-version">v1.0</span></span>
+      <span class="wbm-title">📖 世界书管理器 <span class="wbm-version">v1.2</span></span>
       <div class="wbm-nav-actions">
         <button class="btn btn-primary" :disabled="!anyDirty || saving" @click="saveAll">
           {{ saving ? '⏳' : '💾' }}<span class="btn-label">{{ saving ? ' 保存中...' : ' 保存' }}</span>
         </button>
-        <button class="btn" @click="triggerImport" title="从本地 JSON 文件导入世界书">📥<span class="btn-label"> 导入</span></button>
         <button class="btn" @click="refreshWorldbooks">🔄<span class="btn-label"> 刷新</span></button>
         <!-- 主题切换器 -->
         <div class="theme-picker-wrap" ref="themePickerRef">

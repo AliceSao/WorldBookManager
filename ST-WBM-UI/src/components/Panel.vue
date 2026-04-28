@@ -12,11 +12,14 @@
       <div v-if="selectedWorldbook" class="wb-menu-wrap">
         <button class="btn btn-sm btn-icon" @click="wbMenuOpen = !wbMenuOpen" title="操作">⋯</button>
         <div v-if="wbMenuOpen" class="wb-menu" @click.stop>
+          <button class="wb-menu-item" @click="wbMenuOpen = false; triggerImport()">📥 导入</button>
           <a :href="exportUrl" :download="`${selectedWorldbook}.json`" class="wb-menu-item" @click="wbMenuOpen = false">📤 导出</a>
+          <button class="wb-menu-item" @click="wbMenuOpen = false; duplicateWorldbook()">📋 复制世界书</button>
           <button class="wb-menu-item" @click="wbMenuOpen = false; renameWorldbook()">✏️ 重命名</button>
           <button class="wb-menu-item wb-menu-danger" @click="wbMenuOpen = false; confirmDeleteWorldbook()">🗑️ 删除</button>
         </div>
       </div>
+      <input ref="importFileRef" type="file" accept=".json" style="display:none" @change="importFromFile" />
     </div>
 
     <!-- 世界书选择器（可折叠） -->
@@ -632,6 +635,58 @@ async function doCreateWorldbook() {
     emit("status", `呜喵新建出错了：${(e as Error).message} 😿`, "error");
   }
   creating.value = false;
+}
+
+// ─────── 导入 JSON 文件 ───────
+const importFileRef = ref<HTMLInputElement | null>(null);
+
+function triggerImport() {
+  importFileRef.value?.click();
+}
+
+async function importFromFile(ev: Event) {
+  const input = ev.target as HTMLInputElement;
+  const file = input.files?.[0];
+  if (!file) return;
+  input.value = "";
+  try {
+    const text = await file.text();
+    const data = JSON.parse(text);
+    const entries = data.entries;
+    if (!entries) { emit("status", "JSON 格式无效：缺少 entries", "error"); return; }
+    // 提取条目列表
+    const list: RawEntry[] = Array.isArray(entries) ? entries : Object.values(entries);
+    // 使用文件名（去掉 .json）作为世界书名，或覆盖当前
+    const wbName = selectedWorldbook.value || file.name.replace(/\.json$/i, "");
+    if (!selectedWorldbook.value) {
+      const res = await createWorldbook(wbName, list);
+      if (!res.success) { emit("status", `导入失败：${res.message}`, "error"); return; }
+      emit("refresh-worldbooks");
+      await nextTick();
+      selectedWorldbook.value = wbName;
+    }
+    await loadWorldbook();
+    // 用导入的条目替换
+    localEntries.value = list.map((e, i) => ({ ...createBlankEntry(i), ...e, uid: e.uid ?? i, displayIndex: i }));
+    markDirty();
+    emit("status", `已导入 ${list.length} 条条目（请保存以生效）`, "success");
+  } catch (e) { emit("status", `导入失败：${(e as Error).message}`, "error"); }
+}
+
+// ─────── 复制世界书 ───────
+async function duplicateWorldbook() {
+  const src = selectedWorldbook.value;
+  if (!src) return;
+  const newName = window.prompt(`将「${src}」复制为：`, `${src} (副本)`);
+  if (!newName || !newName.trim()) return;
+  try {
+    const res = await getWorldbook(src);
+    if (!res.success || !res.data) { emit("status", "读取世界书失败", "error"); return; }
+    const createRes = await createWorldbook(newName.trim(), res.data.entries);
+    if (!createRes.success) { emit("status", `复制失败：${createRes.message}`, "error"); return; }
+    emit("refresh-worldbooks");
+    emit("status", `已复制「${src}」→「${newName.trim()}」`, "success");
+  } catch (e) { emit("status", `复制失败：${(e as Error).message}`, "error"); }
 }
 
 // ─────── 世界书重命名 ───────
