@@ -26,6 +26,7 @@
         </div>
       </div>
       <span v-if="isDirty" class="dirty-badge" title="有未保存的修改">●</span>
+      <button v-if="canUndo()" class="btn btn-sm btn-icon" @click="undoHistory" title="回退到上一步">↩</button>
       <span class="entry-count" v-if="selectedWorldbook">{{ filteredEntries.length }}/{{ localEntries.length }}</span>
       <a
         v-if="selectedWorldbook"
@@ -292,6 +293,33 @@ const smartUidTo      = ref<number | null>(null);
 interface UndoEntry { entry: RawEntry; idx: number; timerId?: ReturnType<typeof setTimeout> }
 const undoEntry = ref<UndoEntry | null>(null);
 
+// ─────── 历史回退栈（每个世界书独立，最多10步） ───────
+const historyMap = reactive(new Map<string, RawEntry[][]>());
+const MAX_HISTORY = 10;
+
+function pushHistory() {
+  if (!selectedWorldbook.value || localEntries.value.length === 0) return;
+  const key = selectedWorldbook.value;
+  if (!historyMap.has(key)) historyMap.set(key, []);
+  const stack = historyMap.get(key)!;
+  stack.push(cloneEntries(localEntries.value));
+  if (stack.length > MAX_HISTORY) stack.shift();
+}
+
+function canUndo(): boolean {
+  const stack = historyMap.get(selectedWorldbook.value);
+  return !!stack && stack.length > 0;
+}
+
+function undoHistory() {
+  const stack = historyMap.get(selectedWorldbook.value);
+  if (!stack || stack.length === 0) return;
+  const prev = stack.pop()!;
+  localEntries.value = prev;
+  markDirty();
+  emit("status", `已回退到上一步喵~ ↩（还剩 ${stack.length} 步历史）`, "info");
+}
+
 // 底部操作栏折叠（手机端默认收起，桌面端默认展开）
 const footerExpanded = ref(
   typeof window !== "undefined" ? window.innerWidth > 768 : true
@@ -365,6 +393,15 @@ async function loadWorldbook() {
   if (!selectedWorldbook.value) {
     localEntries.value = [];
     return;
+  }
+  // 切换前检查：如果有未保存的修改，弹窗提示
+  if (isDirty.value) {
+    const action = window.confirm(
+      "当前有未保存的修改，是否放弃修改并切换？\n点击「确定」放弃修改，点击「取消」留在当前页面。"
+    );
+    if (!action) return;
+    isDirty.value = false;
+    emit("dirty", false);
   }
   loading.value = true;
   selectedUids.clear();
@@ -450,6 +487,9 @@ async function doCreateWorldbook() {
 // ─────── 保存（供 App.vue 调用） ───────
 async function save(): Promise<boolean> {
   if (!selectedWorldbook.value || !isDirty.value) return false;
+
+  // ── 保存前推入历史栈（用于回退） ──
+  pushHistory();
 
   // ── UID 重复检查 ──
   const uids    = localEntries.value.map((e) => e.uid);
@@ -696,6 +736,10 @@ function onError(message: string) {
 
 // ─────── 脏标记 ───────
 function markDirty() {
+  if (!isDirty.value) {
+    // 首次标脏时保存一个干净快照，用于回退
+    pushHistory();
+  }
   isDirty.value = true;
   emit("dirty", true);
 }
@@ -718,5 +762,5 @@ function positionShort(entry: RawEntry) {
   return map[entry.position] ?? "?";
 }
 
-defineExpose({ save, receiveCopy, selectedWorldbook });
+defineExpose({ save, receiveCopy, selectedWorldbook, canUndo, undoHistory });
 </script>

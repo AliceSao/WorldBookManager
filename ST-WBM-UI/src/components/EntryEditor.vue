@@ -90,7 +90,30 @@
     </div>
     <div class="editor-row editor-content-row">
       <label class="editor-label">正文</label>
-      <textarea v-model="local.content" class="editor-textarea" rows="6" placeholder="条目内容..."></textarea>
+      <div class="content-edit-wrap">
+        <textarea v-model="local.content" class="editor-textarea" rows="6" placeholder="条目内容..."></textarea>
+        <button class="btn btn-sm content-expand-btn" @click="openContentModal" title="在大窗口中编辑正文">⛶ 展开编辑</button>
+      </div>
+    </div>
+
+    <!-- Content 大窗口编辑器 -->
+    <div v-if="showContentModal" class="content-modal-overlay" @click.self="closeContentModal">
+      <div class="content-modal">
+        <div class="content-modal-header">
+          <span class="content-modal-title">📝 正文编辑 — {{ local.comment || 'UID ' + local.uid }}</span>
+          <button class="btn btn-sm" @click="closeContentModal">✕ 关闭</button>
+        </div>
+        <textarea
+          v-model="local.content"
+          class="content-modal-textarea"
+          placeholder="在此编辑条目正文..."
+          ref="contentModalTextareaRef"
+        ></textarea>
+        <div class="content-modal-footer">
+          <span class="content-modal-info">{{ local.content.length }} 字符</span>
+          <button class="btn btn-primary btn-sm" @click="closeContentModal">✅ 完成</button>
+        </div>
+      </div>
     </div>
     <div class="editor-actions">
       <button class="btn btn-primary btn-sm" @click="applyEdit">✅ 应用</button>
@@ -100,7 +123,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from "vue";
+import { ref, computed, watch, nextTick } from "vue";
 import type { RawEntry } from "../utils/worldbook";
 
 const props = defineProps<{ entry: RawEntry }>();
@@ -111,6 +134,17 @@ const emit = defineEmits<{
 
 const local = ref<RawEntry>({ ...props.entry, key: [...props.entry.key] });
 const newKey = ref("");
+const showContentModal = ref(false);
+const contentModalTextareaRef = ref<HTMLTextAreaElement | null>(null);
+
+function openContentModal() {
+  showContentModal.value = true;
+  nextTick(() => contentModalTextareaRef.value?.focus());
+}
+
+function closeContentModal() {
+  showContentModal.value = false;
+}
 
 watch(() => props.entry, (v) => { local.value = { ...v, key: [...v.key] }; });
 
@@ -154,5 +188,103 @@ function applyEdit() {
   flex-wrap: nowrap;
   min-width: 0;
   width: 100%;
+}
+
+.content-edit-wrap {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.content-expand-btn {
+  align-self: flex-end;
+  font-size: 11px;
+  opacity: 0.7;
+  transition: opacity 0.15s;
+}
+.content-expand-btn:hover { opacity: 1; }
+
+/* Content 大窗口编辑器 */
+.content-modal-overlay {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100vw; height: 100vh;
+  background: rgba(0,0,0,0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 99999;
+  padding: 16px;
+  box-sizing: border-box;
+}
+
+.content-modal {
+  width: min(960px, 96vw);
+  height: min(720px, 85vh);
+  background: var(--bg-card, #1e1e2e);
+  border: 1px solid var(--border, #444);
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 20px 50px rgba(0,0,0,0.6);
+  overflow: hidden;
+}
+
+.content-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--border, #444);
+  flex-shrink: 0;
+}
+
+.content-modal-title {
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--text, #e0e0e0);
+}
+
+.content-modal-textarea {
+  flex: 1;
+  margin: 0;
+  padding: 16px;
+  border: none;
+  outline: none;
+  resize: none;
+  font-family: "Consolas", "SF Mono", monospace;
+  font-size: 14px;
+  line-height: 1.6;
+  background: var(--bg-input, #181825);
+  color: var(--text, #e0e0e0);
+  tab-size: 2;
+}
+
+.content-modal-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 16px;
+  border-top: 1px solid var(--border, #444);
+  flex-shrink: 0;
+}
+
+.content-modal-info {
+  font-size: 12px;
+  color: var(--text-muted, #888);
+}
+
+/* 手机端：弹窗全屏 */
+@media (max-width: 768px) {
+  .content-modal {
+    width: 100vw;
+    height: 100vh;
+    border-radius: 0;
+  }
+  .content-modal-overlay {
+    padding: 0;
+  }
 }
 </style>
