@@ -29,7 +29,7 @@
         <button v-if="wbSearchQuery" class="btn btn-sm btn-icon" @click="wbSearchQuery = ''" title="清空">✕</button>
       </div>
       <div class="wb-select-row">
-        <select v-model="selectedWorldbook" class="wb-select" @change="wbSelectorOpen = false; loadWorldbook()">
+        <select v-model="selectedWorldbook" class="wb-select" @change="handleWorldbookChange">
           <option value="">— 选择世界书 —</option>
           <option v-if="filteredWorldbookList.length === 0 && wbSearchQuery" disabled value="">未找到</option>
           <option v-for="wb in filteredWorldbookList" :key="wb" :value="wb">{{ wb }}</option>
@@ -180,6 +180,7 @@
           @error="onError"
           @clear-selection="selectedUids.clear()"
           @batch-delete="batchDelete"
+          @reorder-uids="reorderUidsByCurrentView"
           @refresh="loadWorldbook"
         />
 
@@ -331,7 +332,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, reactive, nextTick, onMounted, onUnmounted, watch } from "vue";
+import { ref, computed, reactive, nextTick, onMounted, onUnmounted } from "vue";
 import EntryEditor from "./EntryEditor.vue";
 import BatchMenu from "./BatchMenu.vue";
 import type { RawEntry } from "../utils/worldbook";
@@ -360,8 +361,7 @@ const emit = defineEmits<{
 const selectedWorldbook = ref("");
 let _prevWorldbook = "";
 
-// 追踪上一次选中的世界书名（用于取消切换时恢复）
-watch(selectedWorldbook, (_new, old) => { _prevWorldbook = old; });
+// 追踪已成功加载的世界书名（用于取消切换时恢复）
 const localEntries      = ref<RawEntry[]>([]);
 const loading           = ref(false);
 const searchQuery       = ref("");
@@ -412,7 +412,7 @@ interface UndoEntry { entry: RawEntry; idx: number; timerId?: ReturnType<typeof 
 const undoEntry = ref<UndoEntry | null>(null);
 
 // ─────── 排序 ───────
-const sortMode = ref("uid-asc");
+const sortMode = ref("custom");
 
 function applySortMode() {
   const mode = sortMode.value;
@@ -538,21 +538,6 @@ async function loadWorldbook() {
     localEntries.value = [];
     return;
   }
-  // 切换前检查：如果有未保存的修改，弹窗提示
-  if (isDirty.value) {
-    const action = window.confirm(
-      "当前有未保存的修改，是否放弃修改并切换？\n点击「确定」放弃修改，点击「取消」留在当前页面。"
-    );
-    if (!action) {
-      // v-model 已变更，需用 _prevWorldbook 恢复
-      const restore = _prevWorldbook;
-      selectedWorldbook.value = "";
-      nextTick(() => { selectedWorldbook.value = restore; });
-      return;
-    }
-    isDirty.value = false;
-    emit("dirty", false);
-  }
   loading.value = true;
   selectedUids.clear();
   expandedUid.value = null;
@@ -560,6 +545,8 @@ async function loadWorldbook() {
     const res = await getWorldbook(selectedWorldbook.value);
     if (res.success && res.data) {
       localEntries.value = cloneEntries(res.data.entries);
+      applySortMode();
+      _prevWorldbook = selectedWorldbook.value;
       isDirty.value = false;
       emit("dirty", false);
       emit("status", `喵~"${selectedWorldbook.value}"加载好了！共 ${localEntries.value.length} 条条目~ 📖`, "success");
@@ -570,6 +557,24 @@ async function loadWorldbook() {
     emit("status", `呜喵加载失败了：${(e as Error).message} 😿`, "error");
   }
   loading.value = false;
+}
+
+async function handleWorldbookChange() {
+  const next = selectedWorldbook.value;
+  if (isDirty.value) {
+    const action = window.confirm(
+      "当前有未保存的修改，是否放弃修改并切换？\n点击「确定」放弃修改，点击「取消」留在当前页面。"
+    );
+    if (!action) {
+      selectedWorldbook.value = _prevWorldbook;
+      return;
+    }
+    isDirty.value = false;
+    emit("dirty", false);
+  }
+  selectedWorldbook.value = next;
+  wbSelectorOpen.value = false;
+  await loadWorldbook();
 }
 
 // ─────── SSE 实时同步：后端变更时自动刷新 ───────
@@ -1028,6 +1033,47 @@ function doBatchMove() {
   localEntries.value = rest;
   markDirty();
   emit("status", `已${moveDirection.value === "up" ? "上" : "下"}移 ${selected.length} 条条目 ${steps} 步`, "success");
+}
+
+function reorderUidsByCurrentView(startFrom: number) {
+  if (!selectedWorldbook.value) return;
+  const targets = selectedUids.size > 0
+    ? filteredEntries.value.filter((e) => selectedUids.has(e.uid))
+    : [...filteredEntries.value];
+  if (targets.length === 0) {
+    emit("status", "没有可重排的条目", "info");
+    return;
+  }
+
+  const hasFilter = !!searchQuery.value.trim();
+  if (hasFilter && selectedUids.size === 0) {
+    const ok = window.confirm(
+      `当前存在搜索/过滤，仅会按当前可见顺序重排 ${targets.length} 条。\n继续吗？`
+    );
+    if (!ok) return;
+  }
+
+  const orderedOldUids = targets.map((e) => e.uid);
+  const targetUidSet = new Set(orderedOldUids);
+  const occupied = new Set(localEntries.value.filter((e) => !targetUidSet.has(e.uid)).map((e) => e.uid));
+  const uidMap = new Map<number, number>();
+  let cur = Math.max(0, startFrom);
+  for (const oldUid of orderedOldUids) {
+    while (occupied.has(cur)) cur++;
+    uidMap.set(oldUid, cur);
+    occupied.add(cur);
+    cur++;
+  }
+
+  localEntries.value = localEntries.value.map((entry) => {
+    const newUid = uidMap.get(entry.uid);
+    return newUid === undefined ? entry : { ...entry, uid: newUid, displayIndex: newUid };
+  });
+  selectedUids.clear();
+  for (const newUid of uidMap.values()) selectedUids.add(newUid);
+  applySortMode();
+  markDirty();
+  emit("status", `已按当前显示顺序重排 ${uidMap.size} 条 UID（从 ${startFrom} 开始）`, "success");
 }
 
 // ─────── 复制到对侧 ───────

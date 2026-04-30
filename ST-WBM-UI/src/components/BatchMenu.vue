@@ -138,11 +138,11 @@
           <button class="btn btn-sm" style="align-self:flex-start" @click="clearCharFilter">清除绑定</button>
         </div>
 
-        <!-- UID 重新编号（顺序设定，非偏移） -->
+        <!-- UID 重新编号（按当前显示顺序） -->
         <div v-else-if="activeOp === 'uid'">
           <p style="font-size:11px;color:var(--text-muted);margin-bottom:8px">
-            从指定 UID 开始，按当前选中顺序依次分配 N, N+1, N+2...
-            <br>会跳过与未选中条目的冲突值。
+            从指定 UID 开始，按当前界面显示顺序依次分配 N, N+1, N+2...
+            <br>兼容当前排序/搜索/自定义上下移动，会跳过与未选中条目的冲突值。
           </p>
           <div style="display:flex;align-items:center;gap:8px">
             <label style="font-size:12px;white-space:nowrap">起始 UID</label>
@@ -190,6 +190,7 @@ const emit = defineEmits<{
   (e: "error", message: string): void;
   (e: "clear-selection"): void;
   (e: "batch-delete"): void;
+  (e: "reorder-uids", startFrom: number): void;
   (e: "refresh"): void;
 }>();
 
@@ -318,7 +319,8 @@ async function applyOp() {
   } else if (curOp === "uid") {
     const startFrom = Number(v.numVal);
     if (isNaN(startFrom) || startFrom < 0) { emit("error", "呜喵，起始UID要填0以上的整数哦！ 🐱"); return; }
-    await runOp("uid/set", { startFrom });
+    emit("reorder-uids", startFrom);
+    activeOp.value = "";
   } else if (curOp === "create") {
     const count = Math.max(1, Math.min(100, Number(v.numVal) || 1));
     const entries = Array.from({ length: count }, () => ({}));
