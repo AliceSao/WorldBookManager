@@ -210,6 +210,7 @@ function applyEdit() {
   box-sizing: border-box;
   border-radius: 0 !important;
   border: none !important;
+  opacity: 1 !important;
 }
 
 .editor-toolbar {
@@ -246,6 +247,7 @@ function applyEdit() {
   z-index: 99999;
   padding: 16px;
   box-sizing: border-box;
+  opacity: 1 !important;
 }
 
 .content-modal {

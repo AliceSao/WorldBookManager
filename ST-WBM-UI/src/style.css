@@ -706,7 +706,8 @@ body {
 
 .entry-row:hover { background: var(--entry-hover); }
 .entry-row.selected { background: var(--entry-sel); }
-.entry-row.disabled { opacity: 0.45; }
+.entry-row.disabled > .entry-main { opacity: 0.45; }
+.entry-row.disabled > .entry-editor { opacity: 1; }
 .entry-row.expanded { background: var(--entry-exp); }
 
 .entry-main {
