@@ -560,7 +560,6 @@ async function loadWorldbook() {
 }
 
 async function handleWorldbookChange() {
-  const next = selectedWorldbook.value;
   if (isDirty.value) {
     const action = window.confirm(
       "当前有未保存的修改，是否放弃修改并切换？\n点击「确定」放弃修改，点击「取消」留在当前页面。"
@@ -572,7 +571,6 @@ async function handleWorldbookChange() {
     isDirty.value = false;
     emit("dirty", false);
   }
-  selectedWorldbook.value = next;
   wbSelectorOpen.value = false;
   await loadWorldbook();
 }
