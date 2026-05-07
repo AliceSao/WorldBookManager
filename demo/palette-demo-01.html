@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>配色试行 01 - 和风浅色组</title>
+  <style>
+    *{box-sizing:border-box} body{margin:0;font-family:system-ui,"Microsoft YaHei",sans-serif;background:#f5f3ee;color:#222}
+    .wrap{max-width:1400px;margin:0 auto;padding:24px}
+    h1{font-size:28px;margin:0 0 8px} p{margin:0 0 24px;color:#666}
+    .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:18px}
+    .card{border-radius:18px;overflow:hidden;border:1px solid rgba(0,0,0,.08);box-shadow:0 8px 24px rgba(0,0,0,.06);background:var(--bg)}
+    .head{padding:14px 16px;background:linear-gradient(135deg,var(--surface),var(--surface2));color:var(--text);font-weight:700}
+    .body{padding:16px;color:var(--text)}
+    .chips{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0}
+    .chip{padding:6px 10px;border-radius:999px;background:var(--tag);color:var(--text2);font-size:12px}
+    .swatches{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin:14px 0}
+    .sw{height:40px;border-radius:10px;border:1px solid rgba(0,0,0,.08)}
+    .btns{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}
+    .btn{padding:8px 12px;border-radius:10px;border:1px solid var(--border);background:var(--btn);color:var(--text);font-size:13px}
+    .btn.primary{background:var(--accent);color:var(--accentText);border-color:transparent}
+    .input{width:100%;padding:10px 12px;border-radius:10px;border:1px solid var(--border);background:var(--input);color:var(--text);margin-top:10px}
+    .meta{font-size:12px;color:var(--text2);line-height:1.6}
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <h1>配色试行 01：和风浅色组</h1>
+  <p>偏宣纸、茶白、青墨、藤灰方向。只看颜色，不看布局。</p>
+  <div class="grid">
+    <section class="card" style="--bg:#f3efe6;--surface:#e7dfcf;--surface2:#d9cdb8;--text:#2f2418;--text2:#6b5947;--accent:#5c7a68;--accentText:#f7f5ef;--btn:#ebe3d3;--tag:#e1d7c7;--input:#f8f4ec;--border:rgba(60,45,30,.12)">
+      <div class="head">01 青墨染</div><div class="body"><div class="meta">宣纸暖白 + 青墨绿，适合温和古风。</div><div class="chips"><span class="chip">和风</span><span class="chip">青绿</span><span class="chip">浅色</span></div><div class="swatches"><div class="sw" style="background:#f3efe6"></div><div class="sw" style="background:#e7dfcf"></div><div class="sw" style="background:#5c7a68"></div><div class="sw" style="background:#2f2418"></div><div class="sw" style="background:#d9cdb8"></div></div><div class="btns"><button class="btn primary">主按钮</button><button class="btn">次按钮</button></div><input class="input" value="输入框预览" /></div>
+    </section>
+    <section class="card" style="--bg:#f7f4ef;--surface:#ece6da;--surface2:#ddd2c2;--text:#2b241d;--text2:#716253;--accent:#6f8a7a;--accentText:#ffffff;--btn:#ece4d7;--tag:#e5dccd;--input:#fbf8f2;--border:rgba(68,56,42,.12)">
+      <div class="head">02 茶白雾青</div><div class="body"><div class="meta">更偏米白与淡雾青，适合长时间阅读。</div><div class="chips"><span class="chip">低对比</span><span class="chip">柔和</span></div><div class="swatches"><div class="sw" style="background:#f7f4ef"></div><div class="sw" style="background:#ece6da"></div><div class="sw" style="background:#6f8a7a"></div><div class="sw" style="background:#2b241d"></div><div class="sw" style="background:#ddd2c2"></div></div><div class="btns"><button class="btn primary">主按钮</button><button class="btn">次按钮</button></div><input class="input" value="输入框预览" /></div>
+    </section>
+    <section class="card" style="--bg:#efe9de;--surface:#e1d7c8;--surface2:#d2c2ae;--text:#31261f;--text2:#786557;--accent:#8a9b7a;--accentText:#1d1a17;--btn:#e8dece;--tag:#ded1c0;--input:#f4efe7;--border:rgba(70,58,48,.12)">
+      <div class="head">03 枯山水</div><div class="body"><div class="meta">灰米底配鼠尾草绿，克制、静。</div><div class="chips"><span class="chip">禅意</span><span class="chip">沙色</span></div><div class="swatches"><div class="sw" style="background:#efe9de"></div><div class="sw" style="background:#e1d7c8"></div><div class="sw" style="background:#8a9b7a"></div><div class="sw" style="background:#31261f"></div><div class="sw" style="background:#d2c2ae"></div></div><div class="btns"><button class="btn primary">主按钮</button><button class="btn">次按钮</button></div><input class="input" value="输入框预览" /></div>
+    </section>
+    <section class="card" style="--bg:#f1edf2;--surface:#e5dfe8;--surface2:#d4cad8;--text:#2f2630;--text2:#6e6170;--accent:#7a6a87;--accentText:#fff;--btn:#e9e2eb;--tag:#ddd3e0;--input:#f8f4f8;--border:rgba(70,58,76,.12)">
+      <div class="head">04 藤灰</div><div class="body"><div class="meta">带一点淡紫灰，女性化但不甜腻。</div><div class="chips"><span class="chip">藤色</span><span class="chip">灰调</span></div><div class="swatches"><div class="sw" style="background:#f1edf2"></div><div class="sw" style="background:#e5dfe8"></div><div class="sw" style="background:#7a6a87"></div><div class="sw" style="background:#2f2630"></div><div class="sw" style="background:#d4cad8"></div></div><div class="btns"><button class="btn primary">主按钮</button><button class="btn">次按钮</button></div><input class="input" value="输入框预览" /></div>
+    </section>
+    <section class="card" style="--bg:#eef2ef;--surface:#dde6df;--surface2:#c9d8ce;--text:#253128;--text2:#607064;--accent:#5d7b69;--accentText:#fff;--btn:#e3ebe4;--tag:#d6e0d9;--input:#f6faf7;--border:rgba(46,63,50,.12)">
+      <div class="head">05 纸窗青影</div><div class="body"><div class="meta">日式纸门、青灰影调，轻盈通透。</div><div class="chips"><span class="chip">明净</span><span class="chip">青灰</span></div><div class="swatches"><div class="sw" style="background:#eef2ef"></div><div class="sw" style="background:#dde6df"></div><div class="sw" style="background:#5d7b69"></div><div class="sw" style="background:#253128"></div><div class="sw" style="background:#c9d8ce"></div></div><div class="btns"><button class="btn primary">主按钮</button><button class="btn">次按钮</button></div><input class="input" value="输入框预览" /></div>
+    </section>
+  </div>
+</div>
+</body>
+</html>

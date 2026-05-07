@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Layout Demo 01 - Workbench 三栏台面型</title>
+  <style>
+    *{box-sizing:border-box} body{margin:0;font-family:Inter,"Microsoft YaHei",sans-serif;background:#0f1418;color:#e8edf2}
+    .app{display:flex;flex-direction:column;height:100vh}.topbar{height:60px;display:flex;align-items:center;justify-content:space-between;padding:0 18px;border-bottom:1px solid #1f2a33;background:#131a20}.brand{font-weight:700;font-size:18px}.toolbar{display:flex;gap:10px;flex-wrap:wrap}.btn{border:none;border-radius:10px;padding:8px 12px;background:#1e2a33;color:#dce5ee;font-size:13px;cursor:pointer}.btn.primary{background:#3f7b72}.btn.ghost{background:transparent;border:1px solid #2a3945}.btn.active{outline:2px solid #7dc8bc}.main{display:grid;grid-template-columns:280px 420px 1fr;gap:0;flex:1;min-height:0}.pane{border-right:1px solid #1f2a33;min-height:0;display:flex;flex-direction:column;background:#10161b}.pane:last-child{border-right:none;background:#0f1418}.pane-head{padding:14px 16px;border-bottom:1px solid #1f2a33;font-weight:600;color:#9fb2c4;font-size:13px}.pane-body{padding:14px;overflow:auto;flex:1;min-height:0}.wb-list,.entry-list{display:flex;flex-direction:column;gap:8px}.wb-item,.entry-item{padding:12px 14px;border-radius:12px;background:#172028;border:1px solid #23303a;cursor:pointer}.wb-item.active,.entry-item.active{outline:2px solid #4a8c82;background:#1b2730}.entry-meta{font-size:12px;color:#91a4b5;margin-top:6px}.search{width:100%;padding:10px 12px;border-radius:10px;border:1px solid #25313b;background:#0d1216;color:#dce4ec;margin-bottom:12px}.group{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}.chip{padding:6px 10px;border-radius:999px;background:#1a232b;color:#9fb0bf;font-size:12px;cursor:pointer}.chip.active{background:#3f7b72;color:#fff}.editor{padding:18px;display:grid;grid-template-columns:1fr 1fr;gap:14px}.field{display:flex;flex-direction:column;gap:6px}.field.full{grid-column:1/-1}.label{font-size:12px;color:#9fb2c4}.input,.textarea,.select{padding:10px 12px;border-radius:10px;border:1px solid #23303a;background:#121920;color:#e8edf2}.textarea{min-height:180px;resize:vertical}.statusbar{height:42px;border-top:1px solid #1f2a33;padding:0 16px;display:flex;align-items:center;justify-content:space-between;color:#91a4b5;font-size:12px;background:#10161b}.hide{display:none}@media (max-width: 960px){.main{grid-template-columns:1fr}.pane{display:none}.pane.active{display:flex}.editor{grid-template-columns:1fr}.topbar{height:auto;padding:12px;align-items:flex-start;gap:10px;flex-direction:column}.toolbar{width:100%}}
+  </style>
+</head>
+<body>
+<div class="app">
+  <div class="topbar">
+    <div class="brand">Layout 01 · Workbench 三栏台面型</div>
+    <div class="toolbar">
+      <button class="btn ghost">📖 世界书</button>
+      <button class="btn ghost active">🔍 搜索/排序</button>
+      <button class="btn ghost">🧰 批量操作</button>
+      <button class="btn primary">💾 保存</button>
+      <button class="btn ghost">🔄 刷新</button>
+      <button class="btn ghost">🎨 主题</button>
+      <button class="btn ghost">⛶ 全屏</button>
+    </div>
+  </div>
+  <div class="main">
+    <section class="pane active">
+      <div class="pane-head">世界书与筛选</div>
+      <div class="pane-body">
+        <input class="search" placeholder="搜索世界书..." />
+        <div class="wb-list" id="wbList">
+          <div class="wb-item active" data-wb="无职转生 v2.0">无职转生 v2.0</div>
+          <div class="wb-item" data-wb="实教 v2.6">实教 v2.6</div>
+          <div class="wb-item" data-wb="示例世界书">示例世界书</div>
+        </div>
+        <div style="margin:16px 0 10px;font-size:12px;color:#8ea2b6">世界书操作</div>
+        <div class="group" id="wbOps">
+          <span class="chip">📥 导入</span><span class="chip">📤 导出</span><span class="chip">📋 复制</span><span class="chip">✏️ 改名</span><span class="chip">🗑️ 删除</span>
+        </div>
+      </div>
+    </section>
+    <section class="pane active">
+      <div class="pane-head">条目列表（筛选 / 排序 / 选择）</div>
+      <div class="pane-body">
+        <input class="search" placeholder="搜索标题 / 关键字 / 内容..." />
+        <div class="group" id="sortChips"><span class="chip active">自定义</span><span class="chip">优先级</span><span class="chip">UID</span><span class="chip">策略分组</span></div>
+        <div class="entry-list" id="entryList">
+          <div class="entry-item active" data-entry="格式"><strong>[0] 格式</strong><div class="entry-meta">🔵 常量 · Order 2 · @D</div></div>
+          <div class="entry-item" data-entry="AI_guide"><strong>[1] AI_guide</strong><div class="entry-meta">🔵 常量 · Order 3 · @D</div></div>
+          <div class="entry-item" data-entry="时间&地点状态栏"><strong>[2] 时间&地点状态栏</strong><div class="entry-meta">🔵 常量 · Order 5 · @D</div></div>
+        </div>
+      </div>
+    </section>
+    <section class="pane active">
+      <div class="pane-head">条目编辑器</div>
+      <div class="pane-body" style="padding:0">
+        <div class="editor">
+          <div class="field"><div class="label">UID</div><input class="input" id="uidField" value="0"></div>
+          <div class="field"><div class="label">Order</div><input class="input" id="orderField" value="2"></div>
+          <div class="field full"><div class="label">标题</div><input class="input" id="titleField" value="格式"></div>
+          <div class="field"><div class="label">策略</div><select class="select" id="strategyField"><option>常量（蓝灯）</option></select></div>
+          <div class="field"><div class="label">位置</div><select class="select"><option>固定深度</option></select></div>
+          <div class="field full"><div class="label">正文</div><textarea class="textarea" id="contentField">这里是条目正文预览...
+支持全屏编辑、内容弹窗等。</textarea></div>
+        </div>
+      </div>
+    </section>
+  </div>
+  <div class="statusbar"><span id="statusText">优点：电脑端最强、结构清晰、像 IDE/Notion 工作台</span><span id="statusHint">点击左中区域体验切换</span></div>
+</div>
+<script>
+  const entryData = {
+    '格式': { uid: 0, order: 2, title: '格式', strategy: '常量（蓝灯）', content: '这里是条目正文预览...\n支持全屏编辑、内容弹窗等。' },
+    'AI_guide': { uid: 1, order: 3, title: 'AI_guide', strategy: '常量（蓝灯）', content: 'AI 自我审查规则与输出前思维链。' },
+    '时间&地点状态栏': { uid: 2, order: 5, title: '时间&地点状态栏', strategy: '常量（蓝灯）', content: '当前时期 / 所在位置 / 天气季节 / 魔力等级 ...' }
+  };
+  document.querySelectorAll('#wbList .wb-item').forEach(el=>el.onclick=()=>{document.querySelectorAll('#wbList .wb-item').forEach(n=>n.classList.remove('active'));el.classList.add('active');document.getElementById('statusText').textContent='当前世界书：'+el.dataset.wb;});
+  document.querySelectorAll('#sortChips .chip').forEach(el=>el.onclick=()=>{document.querySelectorAll('#sortChips .chip').forEach(n=>n.classList.remove('active'));el.classList.add('active');document.getElementById('statusHint').textContent='排序切换为：'+el.textContent;});
+  document.querySelectorAll('#entryList .entry-item').forEach(el=>el.onclick=()=>{document.querySelectorAll('#entryList .entry-item').forEach(n=>n.classList.remove('active'));el.classList.add('active');const d=entryData[el.dataset.entry];uidField.value=d.uid;orderField.value=d.order;titleField.value=d.title;strategyField.value=d.strategy;contentField.value=d.content;document.getElementById('statusText').textContent='当前条目：'+d.title;});
+  document.querySelectorAll('#wbOps .chip,.toolbar .btn').forEach(el=>el.onclick=()=>{document.getElementById('statusHint').textContent='已点击：'+el.textContent;});
+</script>
+</body>
+</html>

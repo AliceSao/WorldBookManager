@@ -1,6 +1,5 @@
 <template>
   <div class="wbm-app">
-    <!-- Toast 通知层 -->
     <div class="wbm-toasts">
       <div
         v-for="t in toasts"
@@ -15,15 +14,13 @@
       </div>
     </div>
 
-    <!-- 导航栏 -->
     <nav class="wbm-nav">
-      <span class="wbm-title">📖 世界书管理器 <span class="wbm-version">v1.2</span></span>
+      <span class="wbm-title">📖 世界书管理器 <span class="wbm-version">v1.3</span></span>
       <div class="wbm-nav-actions">
-        <button class="btn btn-primary" :disabled="!anyDirty || saving" @click="saveAll">
+        <button class="btn btn-primary" :disabled="!dirty || saving" @click="saveAll">
           {{ saving ? '⏳' : '💾' }}<span class="btn-label">{{ saving ? ' 保存中...' : ' 保存' }}</span>
         </button>
         <button class="btn" @click="refreshWorldbooks">🔄<span class="btn-label"> 刷新</span></button>
-        <!-- 主题切换器 -->
         <div class="theme-picker-wrap" ref="themePickerRef">
           <button class="btn" @click="toggleThemePicker" title="切换主题">🎨</button>
           <div v-if="showThemePicker" class="theme-picker-dropdown">
@@ -39,58 +36,19 @@
             </button>
           </div>
         </div>
-
       </div>
     </nav>
 
-    <!-- 移动端标签栏（仅小屏显示） -->
-    <div class="wbm-mobile-tabs">
-      <button
-        class="mobile-tab-btn"
-        :class="{ active: mobileSide === 'left' }"
-        @click="mobileSide = 'left'"
-      >
-        📖 {{ leftPanelRef?.selectedWorldbook || '左面板' }}
-      </button>
-      <button
-        class="mobile-tab-btn"
-        :class="{ active: mobileSide === 'right' }"
-        @click="mobileSide = 'right'"
-      >
-        📖 {{ rightPanelRef?.selectedWorldbook || '右面板' }}
-      </button>
+    <div class="wbm-panels single-workspace">
+      <Panel
+        ref="panelRef"
+        :worldbooks="worldbooks"
+        @dirty="onDirty"
+        @status="setStatus"
+        @refresh-worldbooks="refreshWorldbooks"
+      />
     </div>
 
-    <!-- 主体：双面板 -->
-    <div class="wbm-panels">
-      <div class="panel-slot" :class="{ 'mobile-hidden': mobileSide !== 'left' }">
-        <Panel
-          ref="leftPanelRef"
-          :worldbooks="worldbooks"
-          :other-worldbook="rightPanelRef?.selectedWorldbook ?? ''"
-          side="left"
-          @dirty="onDirty('left', $event)"
-          @status="setStatus"
-          @copy-to-other="copyToRight"
-          @refresh-worldbooks="refreshWorldbooks"
-        />
-      </div>
-      <div class="wbm-divider" title="双面板分隔">↔</div>
-      <div class="panel-slot" :class="{ 'mobile-hidden': mobileSide !== 'right' }">
-        <Panel
-          ref="rightPanelRef"
-          :worldbooks="worldbooks"
-          :other-worldbook="leftPanelRef?.selectedWorldbook ?? ''"
-          side="right"
-          @dirty="onDirty('right', $event)"
-          @status="setStatus"
-          @copy-to-other="copyToLeft"
-          @refresh-worldbooks="refreshWorldbooks"
-        />
-      </div>
-    </div>
-
-    <!-- 状态栏 -->
     <footer class="wbm-status" :class="statusClass">
       {{ statusMessage || '就绪喵~ 🐾' }}
     </footer>
@@ -100,31 +58,26 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from "vue";
 import Panel from "./components/Panel.vue";
-import { listWorldbooks, saveWorldbook, syncWorldbookToST } from "./services/api";
-import { parseWorldbookJson } from "./utils/worldbook";
+import { listWorldbooks } from "./services/api";
 
 const worldbooks = ref<string[]>([]);
-const leftPanelRef  = ref<InstanceType<typeof Panel> | null>(null);
-const rightPanelRef = ref<InstanceType<typeof Panel> | null>(null);
+const panelRef = ref<InstanceType<typeof Panel> | null>(null);
 const statusMessage = ref("");
-const statusClass   = ref("");
-const dirtyMap      = ref<Record<string, boolean>>({ left: false, right: false });
-const saving        = ref(false);
-const fileInputRef  = ref<HTMLInputElement | null>(null);
-const mobileSide    = ref<"left" | "right">("left");
+const statusClass = ref("");
+const dirty = ref(false);
+const saving = ref(false);
 
-// ─────── 主题系统 ───────
 const THEME_KEY = "wbm_theme_v1";
-const activeTheme    = ref("ocean");
+const activeTheme = ref("ocean");
 const showThemePicker = ref(false);
-const themePickerRef  = ref<HTMLElement | null>(null);
+const themePickerRef = ref<HTMLElement | null>(null);
 
 const themes = [
-  { id: "ocean",  label: "🌊 深海·潮汐",  color: "#00bcd4" },
-  { id: "starry", label: "🌙 星月·长安",  color: "#f0c040" },
-  { id: "forest", label: "🌿 森林·听风",  color: "#66bb6a" },
-  { id: "paper",  label: "📜 宣纸·墨韵",  color: "#8b6d40" },
-  { id: "tassel", label: "🎀 流苏·绛唇",  color: "#ff7f7f" },
+  { id: "ocean",  label: "🌿 青墨纸窗",  color: "#647d6f" },
+  { id: "starry", label: "🌙 群青听潮",  color: "#bda569" },
+  { id: "forest", label: "🍂 金泥茶烟",  color: "#c79d61" },
+  { id: "paper",  label: "🌲 竹岚杉影",  color: "#84b48a" },
+  { id: "tassel", label: "❄️ 月白寒川",  color: "#8f8399" },
 ];
 
 function setTheme(id: string) {
@@ -144,7 +97,6 @@ function onDocClick(e: MouseEvent) {
   }
 }
 
-// ─────── Toast 通知系统 ───────
 interface Toast {
   id: number;
   msg: string;
@@ -176,32 +128,26 @@ function clickToast(id: number) {
   const toast = toasts.value.find((t) => t.id === id);
   if (!toast) return;
   if (!toast.paused) {
-    // 第一次点击：暂停自动关闭，钉住 Toast
     toast.paused = true;
     clearTimeout(toast.timerId);
   } else {
-    // 第二次点击：立即关闭
     removeToast(id);
   }
 }
 
-// ─────── 状态栏 ───────
-const anyDirty = computed(() => dirtyMap.value.left || dirtyMap.value.right);
-
 function setStatus(msg: string, type: "success" | "error" | "info" = "info") {
   statusMessage.value = msg;
-  statusClass.value   = `status-${type}`;
+  statusClass.value = `status-${type}`;
   showToast(msg, type, type === "error" ? 6000 : 3500);
   if (type !== "error") {
     setTimeout(() => { statusMessage.value = ""; statusClass.value = ""; }, 5000);
   }
 }
 
-function onDirty(side: "left" | "right", isDirty: boolean) {
-  dirtyMap.value[side] = isDirty;
+function onDirty(isDirty: boolean) {
+  dirty.value = isDirty;
 }
 
-// ─────── 刷新世界书列表 ───────
 async function refreshWorldbooks() {
   try {
     const res = await listWorldbooks();
@@ -216,82 +162,19 @@ async function refreshWorldbooks() {
   }
 }
 
-// ─────── 保存所有脏面板 ───────
 async function saveAll() {
   saving.value = true;
   try {
-    const panels = [leftPanelRef.value, rightPanelRef.value].filter(Boolean);
-    let saved = 0;
-    for (const panel of panels) {
-      if (panel && (await panel.save())) saved++;
-    }
-    if (saved > 0) setStatus(`喵~帮主人保存了 ${saved} 个世界书啦~ ✨`, "success");
+    const saved = panelRef.value ? await panelRef.value.save() : false;
+    if (saved) setStatus("喵~保存完成啦~ ✨", "success");
     else setStatus("没有需要保存的内容喵~ 🐾", "info");
   } finally {
     saving.value = false;
   }
 }
 
-// ─────── 导入 ───────
-function triggerImport() {
-  fileInputRef.value?.click();
-}
-
-async function importFromFile(event: Event) {
-  const input = event.target as HTMLInputElement;
-  const file  = input.files?.[0];
-  if (!file) return;
-  const worldbookName = file.name.replace(/\.json$/i, "");
-  try {
-    const text = await file.text();
-    let json: unknown;
-    try {
-      json = JSON.parse(text);
-    } catch {
-      setStatus(`呜喵！"${file.name}" 不是有效的 JSON 文件诶~ 😿`, "error");
-      input.value = "";
-      return;
-    }
-    const entries = parseWorldbookJson(json);
-    if (entries.length === 0) {
-      setStatus("呜喵，文件里没找到条目呢...格式对吗？ 🔍", "error");
-      input.value = "";
-      return;
-    }
-    setStatus(`喵~正在努力导入 "${worldbookName}"（${entries.length} 条）...请稍等一下~ 🐾`, "info");
-    const res = await saveWorldbook(worldbookName, entries);
-    if (res.success) {
-      // 同步到 ST 运行时内存
-      const synced = await syncWorldbookToST(worldbookName, entries);
-      await refreshWorldbooks();
-      setStatus(
-        synced
-          ? `喵~导入成功啦！"${worldbookName}"（${entries.length} 条）已同步到酒馆~ 📦`
-          : `喵~文件已导入"${worldbookName}"，不过 ST 同步出了点问题...手动刷新世界书嘛？ 🔄`,
-        synced ? "success" : "info"
-      );
-    } else {
-      setStatus(`呜喵！导入失败了：${res.message}，再试一次嘛？ 😿`, "error");
-    }
-  } catch (e) {
-    setStatus(`呜呜导入出错了喵：${(e as Error).message} 😿`, "error");
-  }
-  input.value = "";
-}
-
-// ─────── 复制跨面板 ───────
-function copyToRight(uids: number[]) {
-  if (!rightPanelRef.value) return;
-  rightPanelRef.value.receiveCopy(leftPanelRef.value?.selectedWorldbook ?? "", uids);
-}
-
-function copyToLeft(uids: number[]) {
-  if (!leftPanelRef.value) return;
-  leftPanelRef.value.receiveCopy(rightPanelRef.value?.selectedWorldbook ?? "", uids);
-}
-
 function onBeforeUnload(e: BeforeUnloadEvent) {
-  if (anyDirty.value) {
+  if (dirty.value) {
     e.preventDefault();
     e.returnValue = "";
   }

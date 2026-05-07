@@ -1,0 +1,268 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Layout Demo 05 - Hybrid Master Detail</title>
+  <style>
+    *{box-sizing:border-box}
+    body{margin:0;font-family:Inter,"Microsoft YaHei",sans-serif;background:#f4efe7;color:#2f261f}
+    .app{display:flex;flex-direction:column;height:100vh}
+    .topbar{height:58px;display:flex;align-items:center;justify-content:space-between;padding:0 18px;background:#faf6ef;border-bottom:1px solid rgba(60,40,20,.08)}
+    .brand{font-weight:700;font-size:18px}
+    .toolbar{display:flex;gap:10px;flex-wrap:wrap}
+    .btn{border:1px solid rgba(60,40,20,.1);border-radius:10px;padding:8px 12px;background:#ece3d6;color:#3a2a1c;font-size:13px;cursor:pointer;transition:.15s}
+    .btn:hover{transform:translateY(-1px)}
+    .btn.primary{background:#647d6f;color:#fff;border-color:transparent}
+    .btn.active{outline:2px solid #647d6f;background:#fbfaf6}
+    .main{display:grid;grid-template-columns:430px 1fr;flex:1;min-height:0}
+    .left{border-right:1px solid rgba(60,40,20,.08);background:#f7f3ec;display:grid;grid-template-rows:auto auto 1fr auto;min-height:0}
+    .right{display:grid;grid-template-rows:auto 1fr;min-height:0;background:#f3efe8}
+    .section{padding:14px 16px;border-bottom:1px solid rgba(60,40,20,.08)}
+    .section h3{margin:0 0 10px;font-size:13px;color:#78685a}
+    .search{width:100%;padding:10px 12px;border-radius:10px;border:1px solid rgba(60,40,20,.12);background:#fff;color:#2e251d}
+    .wb-list,.entry-list{display:flex;flex-direction:column;gap:8px}
+    .wb-item,.entry-item{padding:12px 14px;border-radius:12px;background:#fff;border:1px solid rgba(60,40,20,.08);cursor:pointer}
+    .wb-item.active,.entry-item.active{outline:2px solid #647d6f;background:#fbfaf6}
+    .meta{font-size:12px;color:#7a6959;margin-top:6px}
+    .scroll{overflow:auto;min-height:0;padding:14px}
+    .chips{display:flex;gap:8px;flex-wrap:wrap}
+    .chip{padding:7px 10px;border-radius:999px;background:#ece3d6;color:#5e4c3d;font-size:12px;cursor:pointer}
+    .chip.active{background:#647d6f;color:#fff}
+    .left-actions{padding:12px 14px;border-top:1px solid rgba(60,40,20,.08);background:#fbf7f0;display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+    .editor-shell{display:grid;grid-template-rows:auto auto 1fr;min-height:0}
+    .editor-top{padding:14px 16px;border-bottom:1px solid rgba(60,40,20,.08);display:flex;align-items:center;justify-content:space-between;background:#faf6ef}
+    .editor-sub{padding:12px 16px;border-bottom:1px solid rgba(60,40,20,.08);display:flex;gap:8px;flex-wrap:wrap;background:#f7f2ea}
+    .pill{padding:7px 10px;border-radius:999px;background:#ece3d6;font-size:12px;color:#5e4c3d;cursor:pointer}
+    .pill.active{background:#7b6d89;color:#fff}
+    .editor{padding:18px;overflow:auto;display:grid;grid-template-columns:1fr 1fr;gap:14px}
+    .field{display:flex;flex-direction:column;gap:6px}
+    .field.full{grid-column:1/-1}
+    .label{font-size:12px;color:#7a6959}
+    .input,.select,.textarea{padding:10px 12px;border-radius:10px;border:1px solid rgba(60,40,20,.12);background:#fff;color:#2e251d}
+    .textarea{min-height:220px;resize:vertical}
+    .preview{padding:12px 14px;border-radius:14px;background:#fff;border:1px solid rgba(60,40,20,.08);line-height:1.7;color:#4a3d32}
+    .fullscreen{position:fixed;inset:0;background:rgba(15,15,18,.88);display:none;align-items:center;justify-content:center;z-index:9999}
+    .fullscreen.active{display:flex}
+    .fullscreen-card{width:min(1000px,92vw);height:min(760px,88vh);background:#fff;border-radius:18px;display:grid;grid-template-rows:auto 1fr auto;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.28)}
+    .fullscreen-head,.fullscreen-foot{padding:14px 16px;border-bottom:1px solid rgba(60,40,20,.08);display:flex;justify-content:space-between;align-items:center}
+    .fullscreen-foot{border-top:1px solid rgba(60,40,20,.08);border-bottom:none}
+    .fullscreen-body{padding:16px}
+    .fullscreen-body textarea{width:100%;height:100%;border:1px solid rgba(60,40,20,.12);border-radius:12px;padding:14px;font:inherit;line-height:1.7;resize:none}
+    .status{height:40px;border-top:1px solid rgba(60,40,20,.08);padding:0 16px;display:flex;align-items:center;justify-content:space-between;color:#7a6959;font-size:12px;background:#faf6ef}
+    @media (max-width: 980px){.main{grid-template-columns:1fr}.left{display:none}.editor{grid-template-columns:1fr}.topbar{height:auto;padding:12px;flex-direction:column;align-items:flex-start;gap:10px}.toolbar{width:100%}}
+  </style>
+</head>
+<body>
+<div class="app">
+  <div class="topbar">
+    <div class="brand">Layout 05 · Hybrid Master-Detail（双栏融合版）</div>
+    <div class="toolbar" id="topbarBtns">
+      <button class="btn primary">💾 保存</button>
+      <button class="btn">🔄 刷新</button>
+      <button class="btn">🎨 主题</button>
+      <button class="btn">⛶ 管理器全屏</button>
+    </div>
+  </div>
+
+  <div class="main">
+    <aside class="left">
+      <section class="section">
+        <h3>世界书</h3>
+        <input class="search" placeholder="搜索世界书..." />
+        <div class="chips" style="margin-top:10px">
+          <span class="chip">📥 导入</span>
+          <span class="chip">📤 导出</span>
+          <span class="chip">📋 复制世界书</span>
+          <span class="chip">✏️ 改名</span>
+          <span class="chip">🗑️ 删除</span>
+        </div>
+      </section>
+      <div class="scroll">
+        <div class="wb-list" id="wbList">
+          <div class="wb-item active" data-wb="无职转生 v2.0"><strong>无职转生 v2.0</strong><div class="meta">85 条条目 · 14 蓝灯</div></div>
+          <div class="wb-item" data-wb="实教 v2.6"><strong>实教 v2.6</strong><div class="meta">186 条条目 · 33 蓝灯</div></div>
+          <div class="wb-item" data-wb="示例世界书"><strong>示例世界书</strong><div class="meta">空白模板</div></div>
+        </div>
+      </div>
+
+      <section class="section">
+        <h3>条目列表</h3>
+        <input class="search" placeholder="搜索标题 / 关键字 / 内容..." />
+        <div class="chips" id="sortChips" style="margin-top:10px">
+          <span class="chip active">自定义</span>
+          <span class="chip">优先级</span>
+          <span class="chip">UID</span>
+          <span class="chip">策略分组</span>
+          <span class="chip">标题A-Z</span>
+        </div>
+      </section>
+
+      <div class="scroll" style="padding-top:0">
+        <div class="entry-list" id="entryList">
+          <div class="entry-item active" data-entry="格式"><strong>[0] 格式</strong><div class="meta">🔵 常量 · Order 2 · 固定深度</div></div>
+          <div class="entry-item" data-entry="AI_guide"><strong>[1] AI_guide</strong><div class="meta">🔵 常量 · Order 3 · 固定深度</div></div>
+          <div class="entry-item" data-entry="时间状态"><strong>[2] 时间&地点状态栏</strong><div class="meta">🔵 常量 · Order 5 · 固定深度</div></div>
+          <div class="entry-item" data-entry="公告栏"><strong>[3] 公告栏状态栏</strong><div class="meta">🔵 常量 · Order 7 · 固定深度</div></div>
+        </div>
+      </div>
+
+      <div class="left-actions" id="leftActions">
+        <button class="btn">🔵 常量</button>
+        <button class="btn">🟢 可选</button>
+        <button class="btn">📋 复制选中</button>
+        <button class="btn">＋＋ 批量</button>
+        <button class="btn">⬆ 上移</button>
+        <button class="btn">⬇ 下移</button>
+        <button class="btn">UID 重排</button>
+        <button class="btn">↩ 回退</button>
+      </div>
+    </aside>
+
+    <main class="right">
+      <div class="editor-shell">
+        <div class="editor-top">
+          <div>
+            <strong id="editorTitle">条目编辑 · 格式</strong>
+            <div style="font-size:12px;color:#7a6959;margin-top:4px">右侧只负责编辑，不再承载世界书切换与大量按钮</div>
+          </div>
+          <div style="display:flex;gap:8px">
+            <button class="btn" id="openPreviewBtn">👁️ 预览</button>
+            <button class="btn" id="openContentFullscreenBtn">⛶ 正文全屏</button>
+          </div>
+        </div>
+
+        <div class="editor-sub" id="editorSubTabs">
+          <span class="pill active">基础信息</span>
+          <span class="pill">关键字</span>
+          <span class="pill">递归与效果</span>
+          <span class="pill">状态</span>
+        </div>
+
+        <div class="editor">
+          <div class="field"><div class="label">UID</div><input class="input" id="uidField" value="0"></div>
+          <div class="field"><div class="label">Order</div><input class="input" id="orderField" value="2"></div>
+          <div class="field full"><div class="label">标题</div><input class="input" id="titleField" value="格式"></div>
+          <div class="field"><div class="label">策略</div><select class="select" id="strategyField"><option>🔵 常量</option></select></div>
+          <div class="field"><div class="label">位置</div><select class="select"><option>固定深度</option></select></div>
+          <div class="field full"><div class="label">正文</div><textarea class="textarea" id="contentField">这版是以双栏型为主体，融合了：
+- 三栏台面的“列表与编辑并行”
+- 抽屉型的“右侧专注编辑”
+- 卡片型的“操作分组感”
+- 步骤流/手机逻辑中的“减少拥挤”
+
+如果落地，这应该会比现在顺手很多。</textarea></div>
+          <div class="field full hide" id="previewBlock"><div class="label">正文预览</div><div class="preview" id="previewText">这里显示正文的预览视图。</div></div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <div class="status"><span id="statusText">优点：结构稳定，世界书逻辑和条目逻辑解耦</span><span id="hintText">点击世界书、条目、操作芯片、正文全屏按钮</span></div>
+</div>
+
+<div class="fullscreen" id="contentFullscreen">
+  <div class="fullscreen-card">
+    <div class="fullscreen-head">
+      <strong id="fsTitle">正文专注编辑 · 格式</strong>
+      <button class="btn" id="closeFsBtn">✕ 关闭</button>
+    </div>
+    <div class="fullscreen-body">
+      <textarea id="fsTextarea">这里是正文专注编辑区。</textarea>
+    </div>
+    <div class="fullscreen-foot">
+      <span id="fsCounter">0 字符</span>
+      <div style="display:flex;gap:8px">
+        <button class="btn" id="syncBackBtn">↩ 写回正文</button>
+        <button class="btn primary" id="fsSaveBtn">💾 保存示意</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  const entryData = {
+    '格式': { uid: 0, order: 2, title: '格式', strategy: '🔵 常量', content: '这版是以双栏型为主体，融合了：\n- 三栏台面的“列表与编辑并行”\n- 抽屉型的“右侧专注编辑”\n- 卡片型的“操作分组感”\n- 步骤流/手机逻辑中的“减少拥挤”\n\n如果落地，这应该会比现在顺手很多。' },
+    'AI_guide': { uid: 1, order: 3, title: 'AI_guide', strategy: '🔵 常量', content: 'AI 自我审查规则与思维链。' },
+    '时间状态': { uid: 2, order: 5, title: '时间&地点状态栏', strategy: '🔵 常量', content: '当前时期 / 所在位置 / 天气季节 / 魔力等级 ...' },
+    '公告栏': { uid: 3, order: 7, title: '公告栏状态栏', strategy: '🔵 常量', content: '地区新闻 / 冒险者公会 / 市井传闻 ...' }
+  };
+
+  const uidField = document.getElementById('uidField');
+  const orderField = document.getElementById('orderField');
+  const titleField = document.getElementById('titleField');
+  const strategyField = document.getElementById('strategyField');
+  const contentField = document.getElementById('contentField');
+  const editorTitle = document.getElementById('editorTitle');
+  const statusText = document.getElementById('statusText');
+  const hintText = document.getElementById('hintText');
+  const previewBlock = document.getElementById('previewBlock');
+  const previewText = document.getElementById('previewText');
+  const openPreviewBtn = document.getElementById('openPreviewBtn');
+  const openContentFullscreenBtn = document.getElementById('openContentFullscreenBtn');
+  const contentFullscreen = document.getElementById('contentFullscreen');
+  const fsTextarea = document.getElementById('fsTextarea');
+  const fsTitle = document.getElementById('fsTitle');
+  const fsCounter = document.getElementById('fsCounter');
+
+  function loadEntry(key){
+    const d = entryData[key];
+    uidField.value = d.uid;
+    orderField.value = d.order;
+    titleField.value = d.title;
+    strategyField.value = d.strategy;
+    contentField.value = d.content;
+    editorTitle.textContent = '条目编辑 · ' + d.title;
+    fsTitle.textContent = '正文专注编辑 · ' + d.title;
+    previewText.textContent = d.content;
+    fsTextarea.value = d.content;
+    fsCounter.textContent = fsTextarea.value.length + ' 字符';
+    statusText.textContent = '当前条目：' + d.title;
+  }
+
+  document.querySelectorAll('#wbList .wb-item').forEach(el=>{
+    el.onclick = ()=>{
+      document.querySelectorAll('#wbList .wb-item').forEach(n=>n.classList.remove('active'));
+      el.classList.add('active');
+      statusText.textContent = '当前世界书：' + el.dataset.wb;
+    };
+  });
+
+  document.querySelectorAll('#entryList .entry-item').forEach(el=>{
+    el.onclick = ()=>{
+      document.querySelectorAll('#entryList .entry-item').forEach(n=>n.classList.remove('active'));
+      el.classList.add('active');
+      loadEntry(el.dataset.entry);
+    };
+  });
+
+  document.querySelectorAll('#sortChips .chip,#leftActions .btn,#topbarBtns .btn,#editorSubTabs .pill').forEach(el=>{
+    el.onclick = ()=>{
+      if(el.parentElement && (el.parentElement.id === 'sortChips' || el.parentElement.id === 'editorSubTabs')){
+        el.parentElement.querySelectorAll('.chip,.pill').forEach(n=>n.classList.remove('active'));
+        el.classList.add('active');
+      }
+      hintText.textContent = '已点击：' + el.textContent;
+    };
+  });
+
+  openPreviewBtn.onclick = ()=>{
+    previewBlock.classList.toggle('hide');
+    hintText.textContent = previewBlock.classList.contains('hide') ? '已收起预览' : '已展开预览';
+  };
+
+  openContentFullscreenBtn.onclick = ()=>{
+    fsTextarea.value = contentField.value;
+    fsCounter.textContent = fsTextarea.value.length + ' 字符';
+    contentFullscreen.classList.add('active');
+  };
+
+  document.getElementById('closeFsBtn').onclick = ()=> contentFullscreen.classList.remove('active');
+  document.getElementById('syncBackBtn').onclick = ()=>{ contentField.value = fsTextarea.value; previewText.textContent = fsTextarea.value; fsCounter.textContent = fsTextarea.value.length + ' 字符'; hintText.textContent = '已写回正文'; };
+  document.getElementById('fsSaveBtn').onclick = ()=>{ hintText.textContent = '这里可放保存逻辑'; };
+  fsTextarea.oninput = ()=> fsCounter.textContent = fsTextarea.value.length + ' 字符';
+
+  loadEntry('格式');
+</script>
+</body>
+</html>
