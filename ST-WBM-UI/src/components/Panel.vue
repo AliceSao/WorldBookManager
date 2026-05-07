@@ -17,7 +17,17 @@
               <div class="current-worldbook-title">当前工作书</div>
               <div class="current-worldbook-name">{{ selectedWorldbook || '未选择世界书' }}</div>
               <div v-if="selectedWorldbooks.size" class="current-worldbook-meta">
-                已勾选 {{ selectedWorldbooks.size }} 本：{{ Array.from(selectedWorldbooks).slice(0,2).join(' / ') }}<span v-if="selectedWorldbooks.size > 2"> ...</span>
+                已勾选 {{ selectedWorldbooks.size }} 本
+              </div>
+              <div v-if="selectedWorldbooks.size" class="workspace-chip-row current-worldbook-list">
+                <button
+                  v-for="wb in Array.from(selectedWorldbooks).slice(0,2)"
+                  :key="wb"
+                  class="workspace-chip"
+                  :class="{ active: selectedWorldbook === wb }"
+                  @click="selectWorldbook(wb)"
+                >{{ wb }}</button>
+                <span v-if="selectedWorldbooks.size > 2" class="workspace-entry-meta">+{{ selectedWorldbooks.size - 2 }}</span>
               </div>
             </div>
 
@@ -43,14 +53,14 @@
                 </label>
               </div>
             </div>
-            <div class="workspace-chip-row">
+            <div class="workspace-chip-row worldbook-ops-grid">
               <button class="workspace-chip" @click="triggerImport">📥 导入</button>
               <a v-if="selectedWorldbook" :href="exportUrl" :download="`${selectedWorldbook}.json`" class="workspace-chip">📤 导出</a>
               <button class="workspace-chip" @click="duplicateWorldbook" :disabled="!selectedWorldbook">📋 复制世界书</button>
               <button class="workspace-chip" @click="renameWorldbook" :disabled="!selectedWorldbook">✏️ 改名</button>
               <button class="workspace-chip danger" @click="confirmDeleteWorldbook" :disabled="!selectedWorldbook">🗑️ 删除</button>
+              <button class="workspace-chip" @click="openCreateDialog">＋ 新建</button>
             </div>
-            <button class="btn btn-sm" @click="openCreateDialog">＋ 新建世界书</button>
             <input ref="importFileRef" type="file" accept=".json" style="display:none" @change="importFromFile" />
           </div>
         </section>
@@ -162,7 +172,7 @@
             <div class="workspace-editor-sub">右栏仅负责编辑，不承担世界书切换与批量工具</div>
           </div>
           <div class="workspace-editor-actions">
-            <button class="btn btn-sm" @click="showPreview = !showPreview" :disabled="!currentEntry">👁️ 预览</button>
+            <button class="btn btn-sm" @click="showPreview = !showPreview" :disabled="!currentEntry">{{ showPreview ? '📝 返回编辑' : '👁️ 预览' }}</button>
             <button class="btn btn-sm" @click="openContentEditorFromCurrent" :disabled="!currentEntry">⛶ 正文全屏</button>
           </div>
         </div>
@@ -177,7 +187,7 @@
         <div class="workspace-editor-body">
           <div v-if="!currentEntry" class="panel-empty">从左侧选择一条条目开始编辑喵~ ✏️</div>
           <template v-else>
-            <EntryEditor v-if="!showPreview" :entry="currentEntry" @update="onCurrentEntryUpdate" @cancel="currentEditUid = null" />
+            <EntryEditor ref="entryEditorRef" v-if="!showPreview" :entry="currentEntry" @update="onCurrentEntryUpdate" @cancel="currentEditUid = null" />
             <div v-else class="workspace-preview-card">
               <div class="workspace-preview-title">正文预览</div>
               <div class="preview">{{ currentEntry.content }}</div>
@@ -211,7 +221,7 @@
           <button class="workspace-chip" @click="renameWorldbook" :disabled="!selectedWorldbook">✏️ 改名</button>
           <button class="workspace-chip danger" @click="confirmDeleteWorldbook" :disabled="!selectedWorldbook">🗑️ 删除</button>
         </div>
-        <button class="btn btn-sm" @click="openCreateDialog">＋ 新建世界书</button>
+          <button class="btn btn-sm" @click="openCreateDialog">＋ 新建世界书</button>
       </section>
 
       <section v-show="mobileTab === 'entries'" class="mobile-panel">
@@ -435,9 +445,9 @@ const sortMode = ref("custom");
 const footerExpanded = ref(true);
 const isMobile = ref(typeof window !== "undefined" ? window.innerWidth < 767 : false);
 const mobileTab = ref<"worldbooks" | "entries" | "actions" | "editor">("worldbooks");
-const wbModuleOpen = ref(true);
-const entryModuleOpen = ref(true);
-const actionModuleOpen = ref(true);
+const wbModuleOpen = ref(false);
+const entryModuleOpen = ref(false);
+const actionModuleOpen = ref(false);
 const showSmartDialog = ref("");
 const smartKeyword = ref("");
 const smartUidFrom = ref<number | null>(null);
@@ -461,6 +471,7 @@ const newWbName = ref("");
 const creating = ref(false);
 const newWbInputRef = ref<HTMLInputElement | null>(null);
 const importFileRef = ref<HTMLInputElement | null>(null);
+const entryEditorRef = ref<InstanceType<typeof EntryEditor> | null>(null);
 
 interface UndoEntry { snapshot: RawEntry[] }
 const historyMap = reactive(new Map<string, RawEntry[][]>());
@@ -1041,7 +1052,7 @@ function positionShort(entry: RawEntry) {
 }
 
 function openContentEditorFromCurrent() {
-  const editor = document.querySelector('.entry-editor .content-expand-btn') as HTMLButtonElement | null;
+  const editor = document.querySelector('.entry-editor .content-expand-btn, .entry-editor .editor-toolbar button') as HTMLButtonElement | null;
   editor?.click();
 }
 
