@@ -58,6 +58,10 @@ base_library.zip
 
 # Local doc (not pushed)
 ReadMe_WB_Manager.md
+frontend-rewrite-checklist.md
+
+# Reference projects / research
+references/
 
 # Config
 config/

@@ -80,18 +80,30 @@ body{font-family:"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;backgroun
 /* Workspace layout */
 .workspace-panel{display:flex;flex:1;min-height:0;background:var(--bg)}
 .dual-workspace{display:grid;grid-template-columns:430px 1fr;flex:1;min-height:0;width:100%}
-.workspace-left{border-right:1px solid var(--border);background:var(--surface);overflow:auto;min-height:0}
+.workspace-left{border-right:1px solid var(--border);background:var(--surface);overflow:hidden;min-height:0}
 .workspace-left::-webkit-scrollbar,.workspace-right::-webkit-scrollbar{width:6px}
 .workspace-left::-webkit-scrollbar-thumb,.workspace-right::-webkit-scrollbar-thumb{background:var(--scrollbar);border-radius:999px}
 .workspace-left::-webkit-scrollbar-thumb:hover,.workspace-right::-webkit-scrollbar-thumb:hover{background:var(--accent)}
-.workspace-left{padding:12px;display:flex;flex-direction:column;gap:10px}
+.workspace-left{padding:12px;display:flex;flex-direction:column;gap:10px;min-height:0}
+.workspace-left .left-scroll{display:flex;flex-direction:column;gap:10px;overflow:auto;min-height:0}
 .workspace-right{display:grid;grid-template-rows:auto auto 1fr;min-height:0;background:var(--bg-secondary)}
-.workspace-module{background:var(--surface2);border:1px solid var(--border);border-radius:16px;overflow:hidden;box-shadow:var(--shadow)}
+.workspace-module{background:var(--surface2);border:1px solid var(--border);border-radius:16px;overflow:hidden;box-shadow:var(--shadow);display:flex;flex-direction:column;min-height:0}
 .workspace-module.collapsed .workspace-module-body{display:none}
 .workspace-module-head{padding:12px 14px;display:flex;align-items:center;justify-content:space-between;background:var(--bg-card);border-bottom:1px solid var(--border);cursor:pointer}
 .workspace-module-title{font-size:13px;font-weight:700;color:var(--text-secondary)}
 .workspace-module-sub{font-size:11px;color:var(--text-muted);margin-top:4px}
-.workspace-module-body{padding:12px 14px}
+.workspace-module-body{padding:12px 14px;overflow:auto;min-height:0}
+.current-worldbook-card{padding:12px 14px;border-radius:14px;background:var(--bg-card);border:1px solid var(--border);box-shadow:var(--shadow);margin-bottom:10px}
+.current-worldbook-card.empty{opacity:.7}
+.current-worldbook-title{font-size:11px;color:var(--text-muted);margin-bottom:6px}
+.current-worldbook-name{font-weight:700;color:var(--text-secondary)}
+.current-worldbook-meta{font-size:11px;color:var(--text-muted);margin-top:6px;line-height:1.5}
+.selector-toggle{width:100%;justify-content:center}
+.wb-pool-wrap{display:flex;flex-direction:column;gap:10px;margin-top:10px}
+.wb-pool-list{max-height:260px;overflow:auto}
+.wb-select-row2{justify-content:flex-start}
+.wb-open-btn{border:none;background:transparent;color:inherit;text-align:left;padding:0;cursor:pointer;flex:1;min-width:0}
+.workspace-wb-item.checked{border-color:var(--accent)}
 .workspace-wb-list,.workspace-entry-list{display:flex;flex-direction:column;gap:8px;margin-top:10px}
 .workspace-wb-item,.workspace-entry-item{padding:12px 14px;border-radius:14px;background:var(--bg-card);border:1px solid var(--border);cursor:pointer;transition:.15s box-shadow,.15s transform,.15s background,.15s border-color;box-shadow:var(--shadow)}
 .workspace-wb-item:hover,.workspace-entry-item:hover{transform:translateY(-1px);box-shadow:var(--shadow-deep)}
@@ -105,6 +117,7 @@ body{font-family:"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;backgroun
 .workspace-entry-meta-row{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
 .workspace-entry-meta{font-size:11px;color:var(--text-muted);white-space:nowrap;padding:3px 6px;border-radius:999px;background:var(--tag-bg)}
 .workspace-chip-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.workspace-entry-scroll{max-height:420px;overflow:auto;padding-right:2px}
 .workspace-chip{padding:7px 10px;border-radius:999px;background:var(--btn-bg);color:var(--text-secondary);font-size:12px;cursor:pointer;border:1px solid var(--border);text-decoration:none}
 .workspace-chip:hover{background:var(--btn-hover);border-color:var(--accent)}
 .workspace-chip.active,.workspace-chip.danger.active{background:var(--accent);color:var(--mode-text)}
@@ -146,6 +159,7 @@ body{font-family:"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;backgroun
 .dialog-actions{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}
 .uid-range-inputs{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.uid-range-label{font-size:12px;color:var(--text-muted);white-space:nowrap}.uid-range-field{flex:1;min-width:80px}
 .compact-wb-list{max-height:280px;overflow:auto}.compact-selectable input{margin-right:8px}
+.copy-mode-row{display:flex;gap:12px;flex-wrap:wrap;font-size:12px;color:var(--text-secondary);margin-bottom:10px}
 .content-modal{width:min(960px,96vw);height:min(720px,85vh);padding:0;overflow:hidden}
 .content-modal-header,.content-modal-footer{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--border);flex-shrink:0}.content-modal-footer{border-top:1px solid var(--border);border-bottom:none}.content-modal-title,.content-modal-info{font-size:12px;color:var(--text-muted)}
 .content-modal-textarea{flex:1;margin:0;padding:16px;border:none;outline:none;resize:none;font-family:"Consolas","SF Mono",monospace;font-size:14px;line-height:1.6;background:var(--bg-input);color:var(--text);tab-size:2}

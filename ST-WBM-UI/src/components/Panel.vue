@@ -3,6 +3,7 @@
     <!-- Desktop >= 767px -->
     <div v-if="!isMobile" class="dual-workspace">
       <aside class="workspace-left">
+        <div class="left-scroll">
         <section class="workspace-module" :class="{ collapsed: !wbModuleOpen }">
           <header class="workspace-module-head" @click="wbModuleOpen = !wbModuleOpen">
             <div>
@@ -12,18 +13,35 @@
             <span>{{ wbModuleOpen ? '▾' : '▸' }}</span>
           </header>
           <div class="workspace-module-body">
-            <input v-model="wbSearchQuery" class="search-input" placeholder="搜索世界书..." />
-            <div class="workspace-wb-list">
-              <label
-                v-for="wb in filteredWorldbookList"
-                :key="wb"
-                class="workspace-wb-item"
-                :class="{ active: selectedWorldbook === wb }"
-              >
-                <div class="workspace-wb-main" @click="selectWorldbook(wb)">
-                  <strong>{{ selectedWorldbook === wb ? '☑' : '☐' }} {{ wb }}</strong>
-                </div>
-              </label>
+            <div class="current-worldbook-card" :class="{ empty: !selectedWorldbook }">
+              <div class="current-worldbook-title">当前工作书</div>
+              <div class="current-worldbook-name">{{ selectedWorldbook || '未选择世界书' }}</div>
+              <div v-if="selectedWorldbooks.size" class="current-worldbook-meta">
+                已勾选 {{ selectedWorldbooks.size }} 本：{{ Array.from(selectedWorldbooks).slice(0,2).join(' / ') }}<span v-if="selectedWorldbooks.size > 2"> ...</span>
+              </div>
+            </div>
+
+            <button class="workspace-chip selector-toggle" @click="wbPoolOpen = !wbPoolOpen">
+              📚 选择世界书 {{ wbPoolOpen ? '▾' : '▸' }}
+            </button>
+
+            <div v-show="wbPoolOpen" class="wb-pool-wrap">
+              <input v-model="wbSearchQuery" class="search-input" placeholder="搜索世界书..." />
+              <div class="workspace-wb-list wb-pool-list">
+                <label
+                  v-for="wb in filteredWorldbookList"
+                  :key="wb"
+                  class="workspace-wb-item"
+                  :class="{ active: selectedWorldbook === wb, checked: selectedWorldbooks.has(wb) }"
+                >
+                  <div class="workspace-wb-main wb-select-row2">
+                    <input type="checkbox" :checked="selectedWorldbooks.has(wb)" @change="toggleWorldbookCheck(wb)" @click.stop />
+                    <button class="wb-open-btn" @click.stop="selectWorldbook(wb)">
+                      <strong>{{ selectedWorldbook === wb ? '☑' : '☐' }} {{ wb }}</strong>
+                    </button>
+                  </div>
+                </label>
+              </div>
             </div>
             <div class="workspace-chip-row">
               <button class="workspace-chip" @click="triggerImport">📥 导入</button>
@@ -69,7 +87,7 @@
               <option value="uid-desc">UID ↓</option>
               <option value="strategy">策略分组</option>
             </select>
-            <div class="workspace-entry-list">
+            <div class="workspace-entry-list workspace-entry-scroll">
               <div v-if="!selectedWorldbook" class="panel-empty">请先选择世界书喵~ 📚</div>
               <div v-else-if="loading" class="panel-empty">正在加载中喵... 🐾</div>
               <div v-else-if="filteredEntries.length === 0" class="panel-empty">没有条目呢喵~</div>
@@ -134,6 +152,7 @@
             </div>
           </div>
         </section>
+        </div>
       </aside>
 
       <main class="workspace-right">
@@ -158,8 +177,8 @@
         <div class="workspace-editor-body">
           <div v-if="!currentEntry" class="panel-empty">从左侧选择一条条目开始编辑喵~ ✏️</div>
           <template v-else>
-            <EntryEditor :entry="currentEntry" @update="onCurrentEntryUpdate" @cancel="currentEditUid = null" />
-            <div v-if="showPreview" class="workspace-preview-card">
+            <EntryEditor v-if="!showPreview" :entry="currentEntry" @update="onCurrentEntryUpdate" @cancel="currentEditUid = null" />
+            <div v-else class="workspace-preview-card">
               <div class="workspace-preview-title">正文预览</div>
               <div class="preview">{{ currentEntry.content }}</div>
             </div>
@@ -356,10 +375,14 @@
       <div class="smart-dialog">
         <h4>📚 复制到目标世界书</h4>
         <p style="font-size:11px;color:var(--text-muted);margin-bottom:8px">从已勾选世界书中选择目标，可多选。</p>
+        <div class="copy-mode-row">
+          <label><input type="radio" v-model="copyMode" value="all" /> 复制到全部勾选目标</label>
+          <label><input type="radio" v-model="copyMode" value="single" /> 只复制到一个目标</label>
+        </div>
         <div class="workspace-wb-list compact-wb-list">
           <label v-for="wb in copyCandidateTargets" :key="wb" class="workspace-wb-item compact-selectable">
             <div class="workspace-wb-main">
-              <input type="checkbox" :value="wb" v-model="copyTargetWorldbooks" />
+              <input type="checkbox" :value="wb" v-model="copyTargetWorldbooks" :disabled="copyMode === 'single' && copyTargetWorldbooks.length > 0 && !copyTargetWorldbooks.includes(wb)" />
               <strong>{{ wb }}</strong>
             </div>
           </label>
@@ -407,6 +430,7 @@ const selectedUids = reactive(new Set<number>());
 const isDirty = ref(false);
 const showPreview = ref(false);
 const wbSearchQuery = ref("");
+const wbPoolOpen = ref(false);
 const sortMode = ref("custom");
 const footerExpanded = ref(true);
 const isMobile = ref(typeof window !== "undefined" ? window.innerWidth < 767 : false);
@@ -431,6 +455,7 @@ const showUidDialog = ref(false);
 const uidStartFrom = ref(0);
 const showCopyDialog = ref(false);
 const copyTargetWorldbooks = ref<string[]>([]);
+const copyMode = ref<"all" | "single">("all");
 const showCreateDialog = ref(false);
 const newWbName = ref("");
 const creating = ref(false);
@@ -484,6 +509,11 @@ const filteredEntries = computed(() => {
 const currentEntry = computed(() => localEntries.value.find((e) => e.uid === currentEditUid.value) || null);
 const allSelected = computed(() => filteredEntries.value.length > 0 && filteredEntries.value.every((e) => selectedUids.has(e.uid)));
 const copyCandidateTargets = computed(() => props.worldbooks.filter((wb) => wb !== selectedWorldbook.value));
+
+function toggleWorldbookCheck(wb: string) {
+  if (selectedWorldbooks.has(wb)) selectedWorldbooks.delete(wb);
+  else selectedWorldbooks.add(wb);
+}
 
 function handleResize() {
   isMobile.value = window.innerWidth < 767;
@@ -580,6 +610,7 @@ async function selectWorldbook(wb: string) {
   }
   selectedWorldbook.value = wb;
   selectedWorldbooks.add(wb);
+  wbPoolOpen.value = false;
   await loadWorldbook();
   if (isMobile.value) mobileTab.value = "entries";
 }
@@ -768,6 +799,7 @@ function reorderUidsByCurrentView(startFrom: number) {
 
 function openWorldbookCopyDialog() {
   copyTargetWorldbooks.value = [];
+  copyMode.value = "all";
   showCopyDialog.value = true;
 }
 
@@ -776,6 +808,7 @@ async function confirmCopyToTargets() {
     emit("status", "请选择至少一个目标世界书", "error");
     return;
   }
+  const finalTargets = copyMode.value === "single" ? copyTargetWorldbooks.value.slice(0, 1) : copyTargetWorldbooks.value;
   const sources = Array.from(selectedWorldbooks.size ? selectedWorldbooks : (selectedWorldbook.value ? new Set([selectedWorldbook.value]) : new Set<string>()));
   if (sources.length === 0) {
     emit("status", "请先勾选至少一个源世界书", "error");
@@ -786,13 +819,13 @@ async function confirmCopyToTargets() {
     for (const src of sources) {
       const res = await getWorldbook(src);
       if (!res.success || !res.data) continue;
-      for (const target of copyTargetWorldbooks.value) {
+      for (const target of finalTargets) {
         if (target === src) continue;
         await createWorldbook(target, res.data.entries);
       }
     }
     emit("refresh-worldbooks");
-    emit("status", `已复制 ${sources.length} 本世界书到 ${copyTargetWorldbooks.value.length} 个目标`, "success");
+    emit("status", `已复制 ${sources.length} 本世界书到 ${finalTargets.length} 个目标`, "success");
   } catch (e) {
     emit("status", `复制世界书失败：${(e as Error).message}`, "error");
   }
