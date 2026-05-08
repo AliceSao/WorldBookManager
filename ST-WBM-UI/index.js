@@ -325,7 +325,7 @@
     }
     log("注入到容器: " + (settingsContainer.id || settingsContainer.className));
 
-    const collapsed = localStorage.getItem(STORAGE_KEY) === "true";
+    const collapsed = localStorage.getItem(STORAGE_KEY) !== "false";
     const panel = document.createElement("div");
     panel.id = "wbm-panel";
     panel.innerHTML = `
