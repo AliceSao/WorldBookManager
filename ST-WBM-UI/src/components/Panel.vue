@@ -218,12 +218,17 @@
               <span>查看列表</span>
               <div class="inspect-head-actions">
                 <span class="workspace-entry-meta">{{ inspectItems.length }} 项</span>
+                <button class="btn btn-sm" @click="inspectPanelOpen = !inspectPanelOpen">{{ inspectPanelOpen ? '折叠' : '展开' }}</button>
                 <button class="btn btn-sm" @click="clearInspectItems" :disabled="inspectItems.length === 0">清空列表</button>
               </div>
             </div>
-            <div v-if="inspectItems.length === 0" class="panel-empty inspect-empty">点击条目旁的“＋”或使用批量“加入查看列表”，可在这里缓存多个世界书的不同条目。</div>
-            <div v-else class="inspect-list">
-              <div v-for="item in inspectItems" :key="`${item.worldbook}:${item.uid}`" class="inspect-card">
+            <div v-if="inspectPanelOpen" class="inspect-filters">
+              <input v-model="inspectKeywordQuery" class="search-input" placeholder="按关键字搜索查看列表..." />
+              <input v-model="inspectWorldbookQuery" class="search-input" placeholder="按世界书搜索查看列表..." />
+            </div>
+            <div v-if="inspectPanelOpen && filteredInspectItems.length === 0" class="panel-empty inspect-empty">点击条目旁的“＋”或使用批量“加入查看列表”，可在这里缓存多个世界书的不同条目。</div>
+            <div v-else-if="inspectPanelOpen" class="inspect-list">
+              <div v-for="item in filteredInspectItems" :key="`${item.worldbook}:${item.uid}`" class="inspect-card">
                 <div class="inspect-card-top">
                   <div>
                     <div class="inspect-card-title">{{ item.entry.comment || '（无标题）' }}</div>
@@ -382,6 +387,7 @@
         <div class="mobile-editor-switch">
           <button class="btn btn-sm" @click="showPreview = false">基础编辑</button>
           <button class="btn btn-sm" @click="showPreview = true">正文预览</button>
+          <button class="btn btn-sm" @click="inspectPanelOpen = !inspectPanelOpen">查看列表</button>
           <button class="btn btn-sm" @click="openContentEditorFromCurrent" :disabled="!currentEntry">⛶ 正文全屏</button>
         </div>
         <div v-if="!currentEntry" class="panel-empty">先从条目列表里选一条喵~</div>
@@ -392,6 +398,35 @@
             <div class="preview">{{ currentEntry.content }}</div>
           </div>
         </template>
+        <div class="workspace-inspect-panel mobile-inspect-panel">
+          <div class="workspace-preview-title inspect-head-row">
+            <span>查看列表</span>
+            <div class="inspect-head-actions">
+              <span class="workspace-entry-meta">{{ inspectItems.length }} 项</span>
+              <button class="btn btn-sm" @click="clearInspectItems" :disabled="inspectItems.length === 0">清空列表</button>
+            </div>
+          </div>
+          <div v-if="inspectPanelOpen" class="inspect-filters">
+            <input v-model="inspectKeywordQuery" class="search-input" placeholder="按关键字搜索查看列表..." />
+            <input v-model="inspectWorldbookQuery" class="search-input" placeholder="按世界书搜索查看列表..." />
+          </div>
+          <div v-if="inspectPanelOpen && filteredInspectItems.length === 0" class="panel-empty inspect-empty">当前没有匹配的查看条目。</div>
+          <div v-else-if="inspectPanelOpen" class="inspect-list">
+            <div v-for="item in filteredInspectItems" :key="`${item.worldbook}:${item.uid}`" class="inspect-card">
+              <div class="inspect-card-top">
+                <div>
+                  <div class="inspect-card-title">{{ item.entry.comment || '（无标题）' }}</div>
+                  <div class="inspect-card-sub">{{ item.worldbook }} · UID {{ item.uid }} · {{ strategyShort(item.entry) }} · {{ positionShort(item.entry) }}</div>
+                </div>
+                <div class="inspect-card-actions">
+                  <button class="btn btn-sm" @click="jumpToInspectItem(item)">编辑</button>
+                  <button class="btn btn-sm" @click="removeInspectItem(item.worldbook, item.uid)">关闭</button>
+                </div>
+              </div>
+              <div class="inspect-card-content">{{ item.entry.content || '（空内容）' }}</div>
+            </div>
+          </div>
+        </div>
       </section>
 
       <div class="mobile-bottom-tabs">
@@ -537,6 +572,7 @@ const searchMode = ref("all");
 const selectedUids = reactive(new Set<number>());
 const isDirty = ref(false);
 const showPreview = ref(false);
+const inspectPanelOpen = ref(true);
 const wbSearchQuery = ref("");
 const wbPoolOpen = ref(false);
 const sortMode = ref("custom");
@@ -566,6 +602,8 @@ const showCopyDialog = ref(false);
 const copyTargetWorldbooks = ref<string[]>([]);
 const copyMode = ref<"checked" | "other-working">("checked");
 const copyTargetSearch = ref("");
+const inspectKeywordQuery = ref("");
+const inspectWorldbookQuery = ref("");
 const showCreateDialog = ref(false);
 const newWbName = ref("");
 const creating = ref(false);
@@ -633,6 +671,20 @@ interface InspectItem {
 }
 
 const inspectItems = ref<InspectItem[]>([]);
+const filteredInspectItems = computed(() => {
+  const keyword = inspectKeywordQuery.value.trim().toLowerCase();
+  const worldbook = inspectWorldbookQuery.value.trim().toLowerCase();
+  return inspectItems.value.filter((item) => {
+    const matchWorldbook = !worldbook || item.worldbook.toLowerCase().includes(worldbook);
+    if (!matchWorldbook) return false;
+    if (!keyword) return true;
+    const title = (item.entry.comment || "").toLowerCase();
+    const content = (item.entry.content || "").toLowerCase();
+    const keys = item.entry.key.join(" ").toLowerCase();
+    const keys2 = (item.entry.keysecondary || []).join(" ").toLowerCase();
+    return title.includes(keyword) || content.includes(keyword) || keys.includes(keyword) || keys2.includes(keyword);
+  });
+});
 
 function toggleWorldbookCheck(wb: string) {
   if (selectedWorldbooks.has(wb)) {
@@ -796,6 +848,8 @@ function removeInspectItem(worldbook: string, uid: number) {
 
 function clearInspectItems() {
   inspectItems.value = [];
+  inspectKeywordQuery.value = "";
+  inspectWorldbookQuery.value = "";
 }
 
 async function jumpToInspectItem(item: InspectItem) {
@@ -1379,6 +1433,13 @@ defineExpose({ save });
   margin-top: 12px;
 }
 
+.inspect-filters {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 12px;
+}
+
 .inspect-list {
   display: flex;
   flex-direction: column;
@@ -1439,8 +1500,18 @@ defineExpose({ save });
 
 .mobile-editor-switch {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 8px;
+}
+
+.mobile-editor-switch .btn {
+  min-height: 38px;
+  padding: 0 6px;
+  font-size: 12px;
+}
+
+.mobile-inspect-panel {
+  margin-top: 14px;
 }
 
 @media (max-width: 1024px) {
@@ -1475,8 +1546,12 @@ defineExpose({ save });
     width: 100%;
   }
 
-  .mobile-editor-switch {
+  .inspect-filters {
     grid-template-columns: 1fr;
+  }
+
+  .mobile-editor-switch {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 }
 </style>
