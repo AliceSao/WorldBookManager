@@ -186,14 +186,130 @@ function applyEdit() {
 </script>
 
 <style scoped>
+.entry-editor {
+  width: 100%;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
 .editor-row {
   display: flex;
   align-items: center;
   gap: 6px;
   margin-bottom: 6px;
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
   min-width: 0;
   width: 100%;
+}
+
+.editor-label {
+  flex: 0 0 78px;
+  min-width: 78px;
+  font-size: 12px;
+  color: var(--text, #e8ecf8);
+  line-height: 1.4;
+}
+
+.editor-label.tiny {
+  flex-basis: auto;
+  min-width: 0;
+  font-size: 11px;
+  color: var(--text-muted, #93a0c3);
+}
+
+.editor-input,
+.editor-select,
+.editor-textarea {
+  min-width: 0;
+  width: 100%;
+  border: 1px solid var(--border, #334155);
+  border-radius: 8px;
+  background: var(--bg-input, rgba(16, 24, 39, 0.92));
+  color: var(--text, #e8ecf8);
+  padding: 8px 10px;
+  box-sizing: border-box;
+}
+
+.editor-input,
+.editor-select {
+  flex: 1 1 220px;
+}
+
+.editor-input.narrow,
+.editor-select.narrow {
+  flex: 0 1 120px;
+  width: auto;
+}
+
+.editor-textarea {
+  resize: vertical;
+  line-height: 1.6;
+  min-height: 160px;
+}
+
+.tag-input-group {
+  flex: 1 1 260px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: rgba(79, 70, 229, 0.18);
+  color: var(--text, #e8ecf8);
+  font-size: 12px;
+}
+
+.tag button {
+  border: none;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  padding: 0;
+}
+
+.tag-add {
+  width: 100%;
+}
+
+.check-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  font-size: 12px;
+  color: var(--text, #e8ecf8);
+}
+
+.editor-content-row {
+  align-items: flex-start;
+}
+
+.editor-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-wrap: wrap;
+  width: 100%;
+}
+
+.ml {
+  margin-left: 8px;
 }
 
 /* 全屏编辑模式 */
@@ -308,6 +424,45 @@ function applyEdit() {
 
 /* 手机端：弹窗全屏 */
 @media (max-width: 768px) {
+  .entry-editor {
+    gap: 10px;
+  }
+
+  .editor-row {
+    align-items: stretch;
+    margin-bottom: 0;
+  }
+
+  .editor-label,
+  .editor-label.tiny {
+    flex: 0 0 auto;
+    min-width: 0;
+    width: 100%;
+  }
+
+  .editor-input,
+  .editor-select,
+  .editor-input.narrow,
+  .editor-select.narrow,
+  .tag-input-group,
+  .check-label,
+  .content-edit-wrap {
+    flex: 1 1 100%;
+    width: 100%;
+  }
+
+  .check-label {
+    min-height: 36px;
+  }
+
+  .ml {
+    margin-left: 0;
+  }
+
+  .editor-actions > * {
+    flex: 1 1 calc(50% - 4px);
+  }
+
   .content-modal {
     width: 100vw;
     height: 100vh;

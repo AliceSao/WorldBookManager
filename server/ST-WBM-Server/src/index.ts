@@ -22,20 +22,9 @@ export const info = {
 };
 
 export async function init(router: Router): Promise<void> {
-  console.log("[wb-manager] ST-WBM-Server v1.1.0 正在加载...");
-
   registerWorldbookRoutes(router);
-  console.log("[wb-manager] 世界书路由已注册");
-
   registerEntryRoutes(router);
-  console.log("[wb-manager] 条目路由已注册");
-
   registerBatchRoutes(router);
-  console.log("[wb-manager] 批量操作路由已注册");
-
   registerWebRoutes(router);
-  console.log("[wb-manager] 网页路由已注册");
-
-  console.log("[wb-manager] 加载完成。路由前缀: /api/plugins/wb-manager/");
-  console.log("[wb-manager] 管理界面: <ST地址>/api/plugins/wb-manager/ui/");
+  console.log("[wb-manager] ST-WBM-Server v1.1.0 已加载，路由前缀: /api/plugins/wb-manager/，管理界面: <ST地址>/api/plugins/wb-manager/ui/");
 }

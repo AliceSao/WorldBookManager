@@ -1,26 +1,27 @@
 <template>
-  <div class="batch-menu" v-if="selectedCount > 0">
+  <div class="batch-menu">
     <div class="batch-menu-header">
-      已选 {{ selectedCount }} 条
-      <button class="btn btn-sm" @click="$emit('clear-selection')">清空</button>
+      <span>{{ selectedCount > 0 ? `已选 ${selectedCount} 条` : '未选中条目' }}</span>
+      <button class="btn btn-sm" @click="$emit('clear-selection')" :disabled="selectedCount === 0">清空</button>
     </div>
+    <p v-if="selectedCount === 0" class="batch-empty-hint">先在条目列表勾选至少一条，完整批量工具会在这里保持可见。</p>
     <div class="batch-ops">
-      <button class="btn btn-sm batch-op" @click="op('strategy')">激活策略</button>
-      <button class="btn btn-sm batch-op" @click="op('position')">插入位置</button>
-      <button class="btn btn-sm batch-op" @click="op('depth')">深度</button>
-      <button class="btn btn-sm batch-op" @click="op('order')">Order</button>
-      <button class="btn btn-sm batch-op" @click="op('probability')">触发概率</button>
-      <button class="btn btn-sm batch-op" @click="op('name')">标题</button>
-      <button class="btn btn-sm batch-op" @click="op('keys')">关键字操作</button>
-      <button class="btn btn-sm batch-op" @click="op('recursion')">递归控制</button>
-      <button class="btn btn-sm batch-op" @click="op('effect')">效果</button>
-      <button class="btn btn-sm batch-op" @click="op('group-weight')">组权重</button>
-      <button class="btn btn-sm batch-op" @click="op('char-filter')">角色绑定</button>
-      <button class="btn btn-sm batch-op" @click="op('uid')">重新编号UID</button>
+      <button class="btn btn-sm batch-op" @click="op('strategy')" :disabled="selectedCount === 0">激活策略</button>
+      <button class="btn btn-sm batch-op" @click="op('position')" :disabled="selectedCount === 0">插入位置</button>
+      <button class="btn btn-sm batch-op" @click="op('depth')" :disabled="selectedCount === 0">深度</button>
+      <button class="btn btn-sm batch-op" @click="op('order')" :disabled="selectedCount === 0">Order</button>
+      <button class="btn btn-sm batch-op" @click="op('probability')" :disabled="selectedCount === 0">触发概率</button>
+      <button class="btn btn-sm batch-op" @click="op('name')" :disabled="selectedCount === 0">标题</button>
+      <button class="btn btn-sm batch-op" @click="op('keys')" :disabled="selectedCount === 0">关键字操作</button>
+      <button class="btn btn-sm batch-op" @click="op('recursion')" :disabled="selectedCount === 0">递归控制</button>
+      <button class="btn btn-sm batch-op" @click="op('effect')" :disabled="selectedCount === 0">效果</button>
+      <button class="btn btn-sm batch-op" @click="op('group-weight')" :disabled="selectedCount === 0">组权重</button>
+      <button class="btn btn-sm batch-op" @click="op('char-filter')" :disabled="selectedCount === 0">角色绑定</button>
+      <button class="btn btn-sm batch-op" @click="op('uid')" :disabled="selectedCount === 0">重新编号UID</button>
       <button class="btn btn-sm batch-op" @click="op('create')">批量创建条目</button>
-      <button class="btn btn-sm batch-op batch-enable" @click="op('enabled', true)">批量启用</button>
-      <button class="btn btn-sm batch-op batch-disable" @click="op('enabled', false)">批量禁用</button>
-      <button class="btn btn-sm batch-op batch-delete" @click="$emit('batch-delete')">批量删除</button>
+      <button class="btn btn-sm batch-op batch-enable" @click="op('enabled', true)" :disabled="selectedCount === 0">批量启用</button>
+      <button class="btn btn-sm batch-op batch-disable" @click="op('enabled', false)" :disabled="selectedCount === 0">批量禁用</button>
+      <button class="btn btn-sm batch-op batch-delete" @click="$emit('batch-delete')" :disabled="selectedCount === 0">批量删除</button>
     </div>
 
     <!-- 操作弹窗 -->
@@ -337,6 +338,38 @@ async function applyOp() {
 </script>
 
 <style scoped>
+.batch-menu {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.batch-menu-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--text, #e8ecf8);
+}
+
+.batch-empty-hint {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--text-muted, #93a0c3);
+}
+
+.batch-ops {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 8px;
+}
+
+.batch-op {
+  width: 100%;
+}
+
 .batch-dialog {
   background: var(--surface2);
   border: 1px solid var(--border);
@@ -385,5 +418,11 @@ async function applyOp() {
   justify-content: flex-end;
   flex-wrap: wrap;
   width: 100%;
+}
+
+@media (max-width: 768px) {
+  .batch-ops {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 </style>

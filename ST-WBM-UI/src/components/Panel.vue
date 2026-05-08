@@ -97,6 +97,10 @@
               <option value="uid-desc">UID ↓</option>
               <option value="strategy">策略分组</option>
             </select>
+            <div class="entry-selection-toolbar">
+              <span class="entry-selection-summary">{{ entrySelectionSummary }}</span>
+              <button class="btn btn-sm ghost-btn" @click="selectedUids.clear()" :disabled="selectedUids.size === 0">清空选中</button>
+            </div>
             <div class="workspace-entry-list workspace-entry-scroll">
               <div v-if="!selectedWorldbook" class="panel-empty">请先选择世界书喵~ 📚</div>
               <div v-else-if="loading" class="panel-empty">正在加载中喵... 🐾</div>
@@ -107,7 +111,7 @@
                 :key="entry.uid"
                 class="workspace-entry-item"
                 :class="{ active: currentEditUid === entry.uid, selected: selectedUids.has(entry.uid), disabled: entry.disable }"
-                @click="currentEditUid = entry.uid"
+                @click="handleEntryCardClick(entry.uid)"
               >
                 <div class="workspace-entry-top">
                   <label class="entry-check" @click.stop>
@@ -117,6 +121,7 @@
                     <span class="entry-uid-badge">[{{ entry.uid }}]</span>
                     <span class="entry-title-text">{{ entry.comment || '（无标题）' }}</span>
                   </div>
+                  <button class="entry-action-btn" @click.stop="openEntryEditor(entry.uid)">编辑</button>
                 </div>
                 <div class="workspace-entry-meta-row">
                   <span class="workspace-entry-meta">{{ strategyShort(entry) }}</span>
@@ -263,6 +268,10 @@
         <div class="workspace-chip-row mobile-list-gap">
           <button v-for="m in searchModes" :key="m.id" class="workspace-chip" :class="{ active: searchMode === m.id }" @click="searchMode = m.id; selectedUids.clear()">{{ m.label }}</button>
         </div>
+        <div class="mobile-entry-mode-toggle mobile-list-gap">
+          <button class="btn btn-sm" :class="{ active: mobileEntryMode === 'select' }" @click="mobileEntryMode = 'select'">选择模式</button>
+          <button class="btn btn-sm" :class="{ active: mobileEntryMode === 'edit' }" @click="mobileEntryMode = 'edit'">编辑模式</button>
+        </div>
         <select v-model="sortMode" class="sort-select mobile-sort" @change="applySortMode">
           <option value="custom">自定义（DisplayIndex）</option>
           <option value="priority">优先级（Order）</option>
@@ -276,23 +285,32 @@
           <option value="uid-desc">UID ↓</option>
           <option value="strategy">策略分组</option>
         </select>
+        <div class="entry-selection-toolbar mobile-list-gap">
+          <span class="entry-selection-summary">{{ entrySelectionSummary }} · 当前{{ mobileEntryMode === 'select' ? '点条目即选中' : '点条目即进入编辑' }}</span>
+          <button class="btn btn-sm ghost-btn" @click="selectedUids.clear()" :disabled="selectedUids.size === 0">清空</button>
+        </div>
         <div class="workspace-entry-list mobile-list-gap">
           <div
             v-for="entry in filteredEntries"
             :key="entry.uid"
             class="workspace-entry-item"
             :class="{ active: currentEditUid === entry.uid, selected: selectedUids.has(entry.uid), disabled: entry.disable }"
-            @click="currentEditUid = entry.uid; mobileTab = 'editor'"
+            @click="handleMobileEntryClick(entry.uid)"
           >
             <div class="workspace-entry-top">
+              <label class="entry-check mobile-entry-check" @click.stop>
+                <input type="checkbox" :checked="selectedUids.has(entry.uid)" @change="toggleSelect(entry.uid)" />
+              </label>
               <div class="workspace-entry-title">
                 <span class="entry-uid-badge">[{{ entry.uid }}]</span>
                 <span class="entry-title-text">{{ entry.comment || '（无标题）' }}</span>
               </div>
+              <button class="entry-action-btn" @click.stop="openEntryEditor(entry.uid)">编辑</button>
             </div>
             <div class="workspace-entry-meta-row">
               <span class="workspace-entry-meta">{{ strategyShort(entry) }}</span>
               <span class="workspace-entry-meta">Order {{ entry.order }}</span>
+              <span class="workspace-entry-meta">{{ positionShort(entry) }}</span>
             </div>
           </div>
         </div>
@@ -494,6 +512,7 @@ const sortMode = ref("custom");
 const footerExpanded = ref(true);
 const isMobile = ref(typeof window !== "undefined" ? window.innerWidth < 767 : false);
 const mobileTab = ref<"worldbooks" | "entries" | "actions" | "editor">("worldbooks");
+const mobileEntryMode = ref<"select" | "edit">("select");
 const wbModuleOpen = ref(true);
 const entryModuleOpen = ref(true);
 const actionModuleOpen = ref(true);
@@ -569,6 +588,7 @@ const filteredEntries = computed(() => {
 const currentEntry = computed(() => localEntries.value.find((e) => e.uid === currentEditUid.value) || null);
 const allSelected = computed(() => filteredEntries.value.length > 0 && filteredEntries.value.every((e) => selectedUids.has(e.uid)));
 const copyCandidateTargets = computed(() => props.worldbooks.filter((wb) => wb !== selectedWorldbook.value));
+const entrySelectionSummary = computed(() => `已选 ${selectedUids.size} / 当前 ${filteredEntries.value.length}`);
 
 function toggleWorldbookCheck(wb: string) {
   if (selectedWorldbooks.has(wb)) selectedWorldbooks.delete(wb);
@@ -677,6 +697,23 @@ async function selectWorldbook(wb: string) {
 
 function toggleSelect(uid: number) {
   selectedUids.has(uid) ? selectedUids.delete(uid) : selectedUids.add(uid);
+}
+
+function openEntryEditor(uid: number) {
+  currentEditUid.value = uid;
+  if (isMobile.value) mobileTab.value = "editor";
+}
+
+function handleEntryCardClick(uid: number) {
+  toggleSelect(uid);
+}
+
+function handleMobileEntryClick(uid: number) {
+  if (mobileEntryMode.value === "edit") {
+    openEntryEditor(uid);
+    return;
+  }
+  toggleSelect(uid);
 }
 
 function toggleAll() {
@@ -1130,3 +1167,119 @@ async function batchDelete() {
 
 defineExpose({ save });
 </script>
+
+<style scoped>
+.entry-selection-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 8px 0 10px;
+  flex-wrap: wrap;
+}
+
+.entry-selection-summary {
+  font-size: 12px;
+  color: var(--text-muted, #93a0c3);
+}
+
+.workspace-entry-item {
+  cursor: pointer;
+}
+
+.workspace-entry-top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.workspace-entry-title {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.entry-action-btn {
+  flex: 0 0 auto;
+  min-height: 32px;
+  padding: 6px 10px;
+  border: 1px solid var(--border, #334155);
+  border-radius: 8px;
+  background: var(--bg-input, rgba(16, 24, 39, 0.92));
+  color: var(--text, #e8ecf8);
+  font-size: 12px;
+  line-height: 1;
+}
+
+.entry-action-btn:hover {
+  border-color: var(--accent, #7c9cff);
+}
+
+.mobile-entry-mode-toggle {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.mobile-entry-mode-toggle .btn.active {
+  border-color: var(--accent, #7c9cff);
+  box-shadow: inset 0 0 0 1px var(--accent, #7c9cff);
+}
+
+.workspace-action-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.workspace-action-grid .btn {
+  min-height: 38px;
+  width: 100%;
+  justify-content: center;
+}
+
+.ghost-btn {
+  min-height: 32px;
+}
+
+.mobile-entry-check {
+  margin-right: 2px;
+}
+
+.mobile-action-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.mobile-editor-switch {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+@media (max-width: 1024px) {
+  .workspace-action-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 768px) {
+  .entry-selection-toolbar {
+    align-items: stretch;
+  }
+
+  .entry-selection-toolbar > * {
+    width: 100%;
+  }
+
+  .workspace-entry-top {
+    align-items: flex-start;
+  }
+
+  .entry-action-btn {
+    min-width: 52px;
+  }
+
+  .mobile-editor-switch {
+    grid-template-columns: 1fr;
+  }
+}
+</style>
