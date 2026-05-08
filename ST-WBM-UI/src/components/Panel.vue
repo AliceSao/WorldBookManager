@@ -121,6 +121,7 @@
                     <span class="entry-uid-badge">[{{ entry.uid }}]</span>
                     <span class="entry-title-text">{{ entry.comment || '（无标题）' }}</span>
                   </div>
+                  <button class="entry-action-btn" @click.stop="previewInspectEntry(entry)">查看</button>
                   <button class="entry-action-btn" @click.stop="openEntryEditor(entry.uid)">编辑</button>
                 </div>
                 <div class="workspace-entry-meta-row">
@@ -210,6 +211,32 @@
               <div class="preview">{{ currentEntry.content }}</div>
             </div>
           </template>
+
+          <div class="workspace-inspect-panel">
+            <div class="workspace-preview-title inspect-head-row">
+              <span>查看面板</span>
+              <div class="inspect-head-actions">
+                <span class="workspace-entry-meta">{{ inspectItems.length }} 项</span>
+                <button class="btn btn-sm" @click="clearInspectItems" :disabled="inspectItems.length === 0">清空查看</button>
+              </div>
+            </div>
+            <div v-if="inspectItems.length === 0" class="panel-empty inspect-empty">点击条目上的“查看”，可在这里同时查看多个世界书的不同条目。</div>
+            <div v-else class="inspect-list">
+              <div v-for="item in inspectItems" :key="`${item.worldbook}:${item.uid}`" class="inspect-card">
+                <div class="inspect-card-top">
+                  <div>
+                    <div class="inspect-card-title">{{ item.entry.comment || '（无标题）' }}</div>
+                    <div class="inspect-card-sub">{{ item.worldbook }} · UID {{ item.uid }} · {{ strategyShort(item.entry) }} · {{ positionShort(item.entry) }}</div>
+                  </div>
+                  <div class="inspect-card-actions">
+                    <button class="btn btn-sm" @click="jumpToInspectItem(item)">编辑</button>
+                    <button class="btn btn-sm" @click="removeInspectItem(item.worldbook, item.uid)">关闭</button>
+                  </div>
+                </div>
+                <div class="inspect-card-content">{{ item.entry.content || '（空内容）' }}</div>
+              </div>
+            </div>
+          </div>
         </div>
       </main>
     </div>
@@ -305,6 +332,7 @@
                 <span class="entry-uid-badge">[{{ entry.uid }}]</span>
                 <span class="entry-title-text">{{ entry.comment || '（无标题）' }}</span>
               </div>
+              <button class="entry-action-btn" @click.stop="previewInspectEntry(entry)">查看</button>
               <button class="entry-action-btn" @click.stop="openEntryEditor(entry.uid)">编辑</button>
             </div>
             <div class="workspace-entry-meta-row">
@@ -449,15 +477,16 @@
     <div v-if="showCopyDialog" class="smart-dialog-overlay" @click.self="showCopyDialog = false">
       <div class="smart-dialog">
         <h4>📚 复制到目标世界书</h4>
-        <p style="font-size:11px;color:var(--text-muted);margin-bottom:8px">从已勾选世界书中选择目标，可多选。</p>
+        <p style="font-size:11px;color:var(--text-muted);margin-bottom:8px">当前工作书最多 2 本。可一次复制到已勾选目标书，或直接复制到另一个工作书。</p>
         <div class="copy-mode-row">
-          <label><input type="radio" v-model="copyMode" value="all" /> 复制到全部勾选目标</label>
-          <label><input type="radio" v-model="copyMode" value="single" /> 只复制到一个目标</label>
+          <label><input type="radio" v-model="copyMode" value="checked" /> 复制到已勾选目标书</label>
+          <label><input type="radio" v-model="copyMode" value="other-working" /> 复制到另一个工作书</label>
         </div>
+        <input v-model="copyTargetSearch" class="search-input" placeholder="搜索目标世界书..." />
         <div class="workspace-wb-list compact-wb-list">
-          <label v-for="wb in copyCandidateTargets" :key="wb" class="workspace-wb-item compact-selectable">
+          <label v-for="wb in filteredCopyCandidateTargets" :key="wb" class="workspace-wb-item compact-selectable">
             <div class="workspace-wb-main">
-              <input type="checkbox" :value="wb" v-model="copyTargetWorldbooks" :disabled="copyMode === 'single' && copyTargetWorldbooks.length > 0 && !copyTargetWorldbooks.includes(wb)" />
+              <input type="checkbox" :value="wb" v-model="copyTargetWorldbooks" :disabled="isCopyTargetDisabled(wb)" />
               <strong>{{ wb }}</strong>
             </div>
           </label>
@@ -533,7 +562,8 @@ const showUidDialog = ref(false);
 const uidStartFrom = ref(0);
 const showCopyDialog = ref(false);
 const copyTargetWorldbooks = ref<string[]>([]);
-const copyMode = ref<"all" | "single">("all");
+const copyMode = ref<"checked" | "other-working">("checked");
+const copyTargetSearch = ref("");
 const showCreateDialog = ref(false);
 const newWbName = ref("");
 const creating = ref(false);
@@ -588,11 +618,30 @@ const filteredEntries = computed(() => {
 const currentEntry = computed(() => localEntries.value.find((e) => e.uid === currentEditUid.value) || null);
 const allSelected = computed(() => filteredEntries.value.length > 0 && filteredEntries.value.every((e) => selectedUids.has(e.uid)));
 const copyCandidateTargets = computed(() => props.worldbooks.filter((wb) => wb !== selectedWorldbook.value));
+const filteredCopyCandidateTargets = computed(() => {
+  const q = copyTargetSearch.value.trim().toLowerCase();
+  return q ? copyCandidateTargets.value.filter((wb) => wb.toLowerCase().includes(q)) : copyCandidateTargets.value;
+});
 const entrySelectionSummary = computed(() => `已选 ${selectedUids.size} / 当前 ${filteredEntries.value.length}`);
 
+interface InspectItem {
+  worldbook: string;
+  uid: number;
+  entry: RawEntry;
+}
+
+const inspectItems = ref<InspectItem[]>([]);
+
 function toggleWorldbookCheck(wb: string) {
-  if (selectedWorldbooks.has(wb)) selectedWorldbooks.delete(wb);
-  else selectedWorldbooks.add(wb);
+  if (selectedWorldbooks.has(wb)) {
+    selectedWorldbooks.delete(wb);
+    return;
+  }
+  if (selectedWorldbooks.size >= 2) {
+    emit("status", "当前工作书最多只能勾选 2 本，请先取消一本再勾选。", "info");
+    return;
+  }
+  selectedWorldbooks.add(wb);
 }
 
 function handleResize() {
@@ -679,7 +728,8 @@ async function loadWorldbook() {
 async function selectWorldbook(wb: string) {
   if (selectedWorldbook.value === wb) {
     if (selectedWorldbooks.has(wb)) selectedWorldbooks.delete(wb);
-    else selectedWorldbooks.add(wb);
+    else if (selectedWorldbooks.size < 2) selectedWorldbooks.add(wb);
+    else emit("status", "当前工作书最多只能勾选 2 本，请先取消一本再勾选。", "info");
     return;
   }
   if (isDirty.value) {
@@ -689,7 +739,14 @@ async function selectWorldbook(wb: string) {
     emit("dirty", false);
   }
   selectedWorldbook.value = wb;
-  selectedWorldbooks.add(wb);
+  if (!selectedWorldbooks.has(wb)) {
+    if (selectedWorldbooks.size >= 2) {
+      const keep = Array.from(selectedWorldbooks).find((name) => name === _prevWorldbook) ?? Array.from(selectedWorldbooks)[0] ?? "";
+      selectedWorldbooks.clear();
+      if (keep) selectedWorldbooks.add(keep);
+    }
+    selectedWorldbooks.add(wb);
+  }
   wbPoolOpen.value = false;
   await loadWorldbook();
   if (isMobile.value) mobileTab.value = "entries";
@@ -702,6 +759,31 @@ function toggleSelect(uid: number) {
 function openEntryEditor(uid: number) {
   currentEditUid.value = uid;
   if (isMobile.value) mobileTab.value = "editor";
+}
+
+function previewInspectEntry(entry: RawEntry) {
+  if (!selectedWorldbook.value) return;
+  const exists = inspectItems.value.some((item) => item.worldbook === selectedWorldbook.value && item.uid === entry.uid);
+  if (exists) return;
+  inspectItems.value.push({
+    worldbook: selectedWorldbook.value,
+    uid: entry.uid,
+    entry: JSON.parse(JSON.stringify(entry)),
+  });
+  emit("status", `已加入查看面板：${entry.comment || `UID ${entry.uid}`}`, "info");
+}
+
+function removeInspectItem(worldbook: string, uid: number) {
+  inspectItems.value = inspectItems.value.filter((item) => !(item.worldbook === worldbook && item.uid === uid));
+}
+
+function clearInspectItems() {
+  inspectItems.value = [];
+}
+
+async function jumpToInspectItem(item: InspectItem) {
+  await selectWorldbook(item.worldbook);
+  openEntryEditor(item.uid);
 }
 
 function handleEntryCardClick(uid: number) {
@@ -896,8 +978,16 @@ function reorderUidsByCurrentView(startFrom: number) {
 
 function openWorldbookCopyDialog() {
   copyTargetWorldbooks.value = [];
-  copyMode.value = "all";
+  copyMode.value = "checked";
+  copyTargetSearch.value = "";
   showCopyDialog.value = true;
+}
+
+function isCopyTargetDisabled(wb: string) {
+  if (copyMode.value === "other-working") {
+    return !selectedWorldbooks.has(wb) || (copyTargetWorldbooks.value.length > 0 && !copyTargetWorldbooks.value.includes(wb));
+  }
+  return false;
 }
 
 async function confirmCopyToTargets() {
@@ -905,7 +995,7 @@ async function confirmCopyToTargets() {
     emit("status", "请选择至少一个目标世界书", "error");
     return;
   }
-  const finalTargets = copyMode.value === "single" ? copyTargetWorldbooks.value.slice(0, 1) : copyTargetWorldbooks.value;
+  const finalTargets = copyMode.value === "other-working" ? copyTargetWorldbooks.value.slice(0, 1) : copyTargetWorldbooks.value;
   const sources = Array.from(selectedWorldbooks.size ? selectedWorldbooks : (selectedWorldbook.value ? new Set([selectedWorldbook.value]) : new Set<string>()));
   if (sources.length === 0) {
     emit("status", "请先勾选至少一个源世界书", "error");
@@ -1241,6 +1331,80 @@ defineExpose({ save });
   min-height: 32px;
 }
 
+.workspace-inspect-panel {
+  margin-top: 18px;
+  padding-top: 18px;
+  border-top: 1px solid var(--border, #334155);
+}
+
+.inspect-head-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.inspect-head-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.inspect-empty {
+  margin-top: 12px;
+}
+
+.inspect-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.inspect-card {
+  padding: 14px 16px;
+  border-radius: 14px;
+  border: 1px solid var(--border, #334155);
+  background: var(--bg-card, rgba(15, 23, 42, 0.45));
+}
+
+.inspect-card-top {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.inspect-card-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-secondary, #f8fafc);
+}
+
+.inspect-card-sub {
+  margin-top: 6px;
+  font-size: 11px;
+  color: var(--text-muted, #94a3b8);
+}
+
+.inspect-card-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.inspect-card-content {
+  margin-top: 12px;
+  padding: 12px;
+  border-radius: 12px;
+  background: var(--surface2, rgba(30, 41, 59, 0.5));
+  color: var(--text, #e2e8f0);
+  font-size: 12px;
+  line-height: 1.7;
+  white-space: pre-wrap;
+}
+
 .mobile-entry-check {
   margin-right: 2px;
 }
@@ -1276,6 +1440,15 @@ defineExpose({ save });
 
   .entry-action-btn {
     min-width: 52px;
+  }
+
+  .inspect-card-top {
+    flex-direction: column;
+  }
+
+  .inspect-head-actions,
+  .inspect-card-actions {
+    width: 100%;
   }
 
   .mobile-editor-switch {
