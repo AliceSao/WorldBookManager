@@ -766,7 +766,7 @@ function applySortMode() {
   });
 }
 
-async function loadWorldbook() {
+async function loadWorldbook(options?: { silent?: boolean }) {
   if (!selectedWorldbook.value) {
     localEntries.value = [];
     currentEditUid.value = null;
@@ -783,7 +783,9 @@ async function loadWorldbook() {
       currentEditUid.value = localEntries.value[0]?.uid ?? null;
       isDirty.value = false;
       emit("dirty", false);
-      emit("status", `喵~"${selectedWorldbook.value}"加载好了！共 ${localEntries.value.length} 条条目~ 📖`, "success");
+      if (!options?.silent) {
+        emit("status", `喵~"${selectedWorldbook.value}"加载好了！共 ${localEntries.value.length} 条条目~ 📖`, "success");
+      }
     } else {
       emit("status", `呜喵加载失败了：${res.message} 😿`, "error");
     }
@@ -1351,7 +1353,7 @@ function onBatchDone(msg: string) {
   if (selectedWorldbook.value) {
     dropInspectItemsForWorldbook(selectedWorldbook.value, `世界书「${selectedWorldbook.value}」已批量更新，相关查看项已移除，请重新加入。`);
   }
-  loadWorldbook();
+  loadWorldbook({ silent: true });
 }
 
 function onError(msg: string) {
@@ -1365,8 +1367,7 @@ async function batchDelete() {
   if (res.success) {
     dropInspectItemsForWorldbook(selectedWorldbook.value, `世界书「${selectedWorldbook.value}」已删除条目，相关查看项已移除，请重新加入。`);
     selectedUids.clear();
-    await loadWorldbook();
-    markDirty();
+    await loadWorldbook({ silent: true });
     emit("status", `已删除 ${res.data?.count ?? 0} 条条目`, "success");
   } else {
     emit("status", `删除失败：${res.message}`, "error");
