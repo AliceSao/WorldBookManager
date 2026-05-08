@@ -5,12 +5,11 @@
         v-for="t in toasts"
         :key="t.id"
         class="wbm-toast"
-        :class="[`toast-${t.type}`, { 'toast-paused': t.paused }]"
+        :class="[`toast-${t.type}`]"
         @click="clickToast(t.id)"
       >
-        <span class="toast-icon">{{ t.paused ? '📌' : t.icon }}</span>
+        <span class="toast-icon">{{ t.icon }}</span>
         <span class="toast-msg">{{ t.msg }}</span>
-        <span v-if="t.paused" class="toast-pin-hint">再点关闭</span>
       </div>
     </div>
 
@@ -102,7 +101,6 @@ interface Toast {
   msg: string;
   type: "success" | "error" | "info";
   icon: string;
-  paused: boolean;
   timerId?: ReturnType<typeof setTimeout>;
 }
 const toasts = ref<Toast[]>([]);
@@ -111,7 +109,7 @@ let toastId = 0;
 function showToast(msg: string, type: Toast["type"] = "info", duration = 4000) {
   const icons = { success: "✨", error: "😿", info: "🐾" };
   const id = ++toastId;
-  const toast: Toast = { id, msg, type, icon: icons[type], paused: false };
+  const toast: Toast = { id, msg, type, icon: icons[type] };
   toast.timerId = setTimeout(() => removeToast(id), duration);
   toasts.value.push(toast);
 }
@@ -125,14 +123,7 @@ function removeToast(id: number) {
 }
 
 function clickToast(id: number) {
-  const toast = toasts.value.find((t) => t.id === id);
-  if (!toast) return;
-  if (!toast.paused) {
-    toast.paused = true;
-    clearTimeout(toast.timerId);
-  } else {
-    removeToast(id);
-  }
+  removeToast(id);
 }
 
 function setStatus(msg: string, type: "success" | "error" | "info" = "info") {
