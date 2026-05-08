@@ -121,7 +121,7 @@
                     <span class="entry-uid-badge">[{{ entry.uid }}]</span>
                     <span class="entry-title-text">{{ entry.comment || '（无标题）' }}</span>
                   </div>
-                  <button class="entry-action-btn" @click.stop="previewInspectEntry(entry)">查看</button>
+                  <button class="entry-action-btn entry-add-btn" @click.stop="previewInspectEntry(entry)" title="加入查看列表">＋</button>
                   <button class="entry-action-btn" @click.stop="openEntryEditor(entry.uid)">编辑</button>
                 </div>
                 <div class="workspace-entry-meta-row">
@@ -157,6 +157,7 @@
               <button class="btn btn-sm" @click="addEntry" :disabled="!selectedWorldbook">＋ 新建</button>
               <button class="btn btn-sm" @click="openBatchCreate" :disabled="!selectedWorldbook">＋＋ 批量</button>
               <button class="btn btn-sm" @click="duplicateSelected" :disabled="selectedUids.size === 0">📋 复制条目</button>
+              <button class="btn btn-sm" @click="previewInspectSelected" :disabled="selectedUids.size === 0">📥 加入查看列表</button>
               <button class="btn btn-sm" @click="openWorldbookCopyDialog" :disabled="selectedWorldbooks.size === 0">📚 复制到目标书</button>
             </div>
             <div class="action-group-title">移动与编号</div>
@@ -214,13 +215,13 @@
 
           <div class="workspace-inspect-panel">
             <div class="workspace-preview-title inspect-head-row">
-              <span>查看面板</span>
+              <span>查看列表</span>
               <div class="inspect-head-actions">
                 <span class="workspace-entry-meta">{{ inspectItems.length }} 项</span>
-                <button class="btn btn-sm" @click="clearInspectItems" :disabled="inspectItems.length === 0">清空查看</button>
+                <button class="btn btn-sm" @click="clearInspectItems" :disabled="inspectItems.length === 0">清空列表</button>
               </div>
             </div>
-            <div v-if="inspectItems.length === 0" class="panel-empty inspect-empty">点击条目上的“查看”，可在这里同时查看多个世界书的不同条目。</div>
+            <div v-if="inspectItems.length === 0" class="panel-empty inspect-empty">点击条目旁的“＋”或使用批量“加入查看列表”，可在这里缓存多个世界书的不同条目。</div>
             <div v-else class="inspect-list">
               <div v-for="item in inspectItems" :key="`${item.worldbook}:${item.uid}`" class="inspect-card">
                 <div class="inspect-card-top">
@@ -332,7 +333,7 @@
                 <span class="entry-uid-badge">[{{ entry.uid }}]</span>
                 <span class="entry-title-text">{{ entry.comment || '（无标题）' }}</span>
               </div>
-              <button class="entry-action-btn" @click.stop="previewInspectEntry(entry)">查看</button>
+              <button class="entry-action-btn entry-add-btn" @click.stop="previewInspectEntry(entry)" title="加入查看列表">＋</button>
               <button class="entry-action-btn" @click.stop="openEntryEditor(entry.uid)">编辑</button>
             </div>
             <div class="workspace-entry-meta-row">
@@ -355,6 +356,7 @@
           <button class="btn btn-sm" @click="addEntry" :disabled="!selectedWorldbook">＋ 新建</button>
           <button class="btn btn-sm" @click="openBatchCreate" :disabled="!selectedWorldbook">＋＋ 批量</button>
           <button class="btn btn-sm" @click="duplicateSelected" :disabled="selectedUids.size === 0">📋 复制条目</button>
+          <button class="btn btn-sm" @click="previewInspectSelected" :disabled="selectedUids.size === 0">📥 加入查看列表</button>
           <button class="btn btn-sm" @click="openWorldbookCopyDialog" :disabled="selectedWorldbooks.size === 0">📚 复制到目标书</button>
           <button class="btn btn-sm" @click="openMoveDialog('up')" :disabled="selectedUids.size === 0">⬆ 上移</button>
           <button class="btn btn-sm" @click="openMoveDialog('down')" :disabled="selectedUids.size === 0">⬇ 下移</button>
@@ -761,16 +763,31 @@ function openEntryEditor(uid: number) {
   if (isMobile.value) mobileTab.value = "editor";
 }
 
-function previewInspectEntry(entry: RawEntry) {
-  if (!selectedWorldbook.value) return;
-  const exists = inspectItems.value.some((item) => item.worldbook === selectedWorldbook.value && item.uid === entry.uid);
-  if (exists) return;
+function addInspectItem(worldbook: string, entry: RawEntry) {
+  const exists = inspectItems.value.some((item) => item.worldbook === worldbook && item.uid === entry.uid);
+  if (exists) return false;
   inspectItems.value.push({
-    worldbook: selectedWorldbook.value,
+    worldbook,
     uid: entry.uid,
     entry: JSON.parse(JSON.stringify(entry)),
   });
-  emit("status", `已加入查看面板：${entry.comment || `UID ${entry.uid}`}`, "info");
+  return true;
+}
+
+function previewInspectSelected() {
+  if (!selectedWorldbook.value || selectedUids.size === 0) return;
+  const candidates = localEntries.value.filter((entry) => selectedUids.has(entry.uid));
+  let added = 0;
+  for (const entry of candidates) {
+    if (addInspectItem(selectedWorldbook.value, entry)) added++;
+  }
+  emit("status", `已加入查看列表 ${added} 条`, "info");
+}
+
+function previewInspectEntry(entry: RawEntry) {
+  if (!selectedWorldbook.value) return;
+  if (!addInspectItem(selectedWorldbook.value, entry)) return;
+  emit("status", `已加入查看列表：${entry.comment || `UID ${entry.uid}`}`, "info");
 }
 
 function removeInspectItem(worldbook: string, uid: number) {
@@ -1302,6 +1319,13 @@ defineExpose({ save });
 
 .entry-action-btn:hover {
   border-color: var(--accent, #7c9cff);
+}
+
+.entry-add-btn {
+  min-width: 32px;
+  padding: 6px 0;
+  font-size: 16px;
+  font-weight: 700;
 }
 
 .mobile-entry-mode-toggle {
