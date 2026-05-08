@@ -187,11 +187,12 @@
       <main class="workspace-right">
         <div class="workspace-editor-top">
           <div>
-            <div class="workspace-editor-title">条目编辑 · {{ currentEntry?.comment || '未选择条目' }}</div>
-            <div class="workspace-editor-sub">右栏仅负责编辑，不承担世界书切换与批量工具</div>
+            <div class="workspace-editor-title">{{ isInspectViewActive ? `查看列表 · ${filteredInspectItems.length} 项` : `条目编辑 · ${currentEntry?.comment || '未选择条目'}` }}</div>
+            <div class="workspace-editor-sub">{{ isInspectViewActive ? '右栏当前显示查看列表，可搜索、折叠并快速切回编辑' : '右栏仅负责编辑，不承担世界书切换与批量工具' }}</div>
           </div>
           <div class="workspace-editor-actions">
-            <button class="btn btn-sm" @click="showPreview = !showPreview" :disabled="!currentEntry">{{ showPreview ? '📝 返回编辑' : '👁️ 预览' }}</button>
+            <button class="btn btn-sm" @click="showPreview = !showPreview; inspectViewMode = 'editor'" :disabled="!currentEntry">{{ showPreview ? '📝 返回编辑' : '👁️ 预览' }}</button>
+            <button class="btn btn-sm" @click="inspectViewMode = 'inspect'" :disabled="inspectItems.length === 0">查看列表</button>
             <button class="btn btn-sm" @click="openContentEditorFromCurrent" :disabled="!currentEntry">⛶ 正文全屏</button>
           </div>
         </div>
@@ -204,7 +205,42 @@
         </div>
 
         <div class="workspace-editor-body">
-          <div v-if="!currentEntry" class="panel-empty">从左侧选择一条条目开始编辑喵~ ✏️</div>
+          <template v-if="isInspectViewActive">
+            <div class="workspace-inspect-panel standalone-inspect-panel">
+              <div class="workspace-preview-title inspect-head-row">
+                <span>查看列表</span>
+                <div class="inspect-head-actions">
+                  <span class="workspace-entry-meta">{{ inspectItems.length }} 项</span>
+                  <button class="btn btn-sm" @click="inspectPanelOpen = !inspectPanelOpen">{{ inspectPanelOpen ? '折叠' : '展开' }}</button>
+                  <button class="btn btn-sm" @click="clearInspectItems" :disabled="inspectItems.length === 0">清空列表</button>
+                </div>
+              </div>
+              <div v-if="inspectPanelOpen" class="inspect-filters">
+                <input v-model="inspectKeywordQuery" class="search-input" placeholder="按关键字搜索查看列表..." />
+                <input v-model="inspectWorldbookQuery" class="search-input" placeholder="按世界书搜索查看列表..." />
+              </div>
+              <div v-if="inspectPanelOpen && filteredInspectItems.length === 0" class="panel-empty inspect-empty">当前没有匹配的查看条目。</div>
+              <div v-else-if="inspectPanelOpen" class="inspect-list">
+                <div v-for="item in filteredInspectItems" :key="`${item.worldbook}:${item.uid}`" class="inspect-card">
+                  <div class="inspect-card-top">
+                    <div>
+                      <div class="inspect-card-title-row">
+                        <button class="inspect-toggle-btn" @click="toggleInspectItem(item.worldbook, item.uid)">{{ isInspectItemOpen(item.worldbook, item.uid) ? '▾' : '▸' }}</button>
+                        <div class="inspect-card-title">{{ item.entry.comment || '（无标题）' }}</div>
+                      </div>
+                      <div class="inspect-card-sub">{{ item.worldbook }} · UID {{ item.uid }} · {{ strategyShort(item.entry) }} · {{ positionShort(item.entry) }}</div>
+                    </div>
+                    <div class="inspect-card-actions">
+                      <button class="btn btn-sm" @click="jumpToInspectItem(item)">编辑</button>
+                      <button class="btn btn-sm" @click="removeInspectItem(item.worldbook, item.uid)">关闭</button>
+                    </div>
+                  </div>
+                  <div v-if="isInspectItemOpen(item.worldbook, item.uid)" class="inspect-card-content">{{ item.entry.content || '（空内容）' }}</div>
+                </div>
+              </div>
+            </div>
+          </template>
+          <div v-else-if="!currentEntry" class="panel-empty">从左侧选择一条条目开始编辑喵~ ✏️</div>
           <template v-else>
             <EntryEditor ref="entryEditorRef" v-if="!showPreview" :entry="currentEntry" @update="onCurrentEntryUpdate" @cancel="currentEditUid = null" />
             <div v-else class="workspace-preview-card">
@@ -212,37 +248,6 @@
               <div class="preview">{{ currentEntry.content }}</div>
             </div>
           </template>
-
-          <div class="workspace-inspect-panel">
-            <div class="workspace-preview-title inspect-head-row">
-              <span>查看列表</span>
-              <div class="inspect-head-actions">
-                <span class="workspace-entry-meta">{{ inspectItems.length }} 项</span>
-                <button class="btn btn-sm" @click="inspectPanelOpen = !inspectPanelOpen">{{ inspectPanelOpen ? '折叠' : '展开' }}</button>
-                <button class="btn btn-sm" @click="clearInspectItems" :disabled="inspectItems.length === 0">清空列表</button>
-              </div>
-            </div>
-            <div v-if="inspectPanelOpen" class="inspect-filters">
-              <input v-model="inspectKeywordQuery" class="search-input" placeholder="按关键字搜索查看列表..." />
-              <input v-model="inspectWorldbookQuery" class="search-input" placeholder="按世界书搜索查看列表..." />
-            </div>
-            <div v-if="inspectPanelOpen && filteredInspectItems.length === 0" class="panel-empty inspect-empty">点击条目旁的“＋”或使用批量“加入查看列表”，可在这里缓存多个世界书的不同条目。</div>
-            <div v-else-if="inspectPanelOpen" class="inspect-list">
-              <div v-for="item in filteredInspectItems" :key="`${item.worldbook}:${item.uid}`" class="inspect-card">
-                <div class="inspect-card-top">
-                  <div>
-                    <div class="inspect-card-title">{{ item.entry.comment || '（无标题）' }}</div>
-                    <div class="inspect-card-sub">{{ item.worldbook }} · UID {{ item.uid }} · {{ strategyShort(item.entry) }} · {{ positionShort(item.entry) }}</div>
-                  </div>
-                  <div class="inspect-card-actions">
-                    <button class="btn btn-sm" @click="jumpToInspectItem(item)">编辑</button>
-                    <button class="btn btn-sm" @click="removeInspectItem(item.worldbook, item.uid)">关闭</button>
-                  </div>
-                </div>
-                <div class="inspect-card-content">{{ item.entry.content || '（空内容）' }}</div>
-              </div>
-            </div>
-          </div>
         </div>
       </main>
     </div>
@@ -385,12 +390,47 @@
 
       <section v-show="mobileTab === 'editor'" class="mobile-panel">
         <div class="mobile-editor-switch">
-          <button class="btn btn-sm" @click="showPreview = false">基础编辑</button>
-          <button class="btn btn-sm" @click="showPreview = true">正文预览</button>
-          <button class="btn btn-sm" @click="inspectPanelOpen = !inspectPanelOpen">查看列表</button>
+          <button class="btn btn-sm" @click="showPreview = false; inspectViewMode = 'editor'">基础编辑</button>
+          <button class="btn btn-sm" @click="showPreview = true; inspectViewMode = 'editor'">正文预览</button>
+          <button class="btn btn-sm" @click="inspectViewMode = 'inspect'">查看列表</button>
           <button class="btn btn-sm" @click="openContentEditorFromCurrent" :disabled="!currentEntry">⛶ 正文全屏</button>
         </div>
-        <div v-if="!currentEntry" class="panel-empty">先从条目列表里选一条喵~</div>
+        <template v-if="inspectViewMode === 'inspect'">
+          <div class="workspace-inspect-panel mobile-inspect-panel standalone-inspect-panel">
+            <div class="workspace-preview-title inspect-head-row">
+              <span>查看列表</span>
+              <div class="inspect-head-actions">
+                <span class="workspace-entry-meta">{{ inspectItems.length }} 项</span>
+                <button class="btn btn-sm" @click="inspectPanelOpen = !inspectPanelOpen">{{ inspectPanelOpen ? '折叠' : '展开' }}</button>
+                <button class="btn btn-sm" @click="clearInspectItems" :disabled="inspectItems.length === 0">清空列表</button>
+              </div>
+            </div>
+            <div v-if="inspectPanelOpen" class="inspect-filters">
+              <input v-model="inspectKeywordQuery" class="search-input" placeholder="按关键字搜索查看列表..." />
+              <input v-model="inspectWorldbookQuery" class="search-input" placeholder="按世界书搜索查看列表..." />
+            </div>
+            <div v-if="inspectPanelOpen && filteredInspectItems.length === 0" class="panel-empty inspect-empty">当前没有匹配的查看条目。</div>
+            <div v-else-if="inspectPanelOpen" class="inspect-list">
+              <div v-for="item in filteredInspectItems" :key="`${item.worldbook}:${item.uid}`" class="inspect-card">
+                <div class="inspect-card-top">
+                  <div>
+                    <div class="inspect-card-title-row">
+                      <button class="inspect-toggle-btn" @click="toggleInspectItem(item.worldbook, item.uid)">{{ isInspectItemOpen(item.worldbook, item.uid) ? '▾' : '▸' }}</button>
+                      <div class="inspect-card-title">{{ item.entry.comment || '（无标题）' }}</div>
+                    </div>
+                    <div class="inspect-card-sub">{{ item.worldbook }} · UID {{ item.uid }} · {{ strategyShort(item.entry) }} · {{ positionShort(item.entry) }}</div>
+                  </div>
+                  <div class="inspect-card-actions">
+                    <button class="btn btn-sm" @click="jumpToInspectItem(item)">编辑</button>
+                    <button class="btn btn-sm" @click="removeInspectItem(item.worldbook, item.uid)">关闭</button>
+                  </div>
+                </div>
+                <div v-if="isInspectItemOpen(item.worldbook, item.uid)" class="inspect-card-content">{{ item.entry.content || '（空内容）' }}</div>
+              </div>
+            </div>
+          </div>
+        </template>
+        <div v-else-if="!currentEntry" class="panel-empty">先从条目列表里选一条喵~</div>
         <template v-else>
           <EntryEditor v-if="!showPreview" :entry="currentEntry" @update="onCurrentEntryUpdate" @cancel="currentEditUid = null" />
           <div v-else class="workspace-preview-card mobile-preview-card">
@@ -398,35 +438,6 @@
             <div class="preview">{{ currentEntry.content }}</div>
           </div>
         </template>
-        <div class="workspace-inspect-panel mobile-inspect-panel">
-          <div class="workspace-preview-title inspect-head-row">
-            <span>查看列表</span>
-            <div class="inspect-head-actions">
-              <span class="workspace-entry-meta">{{ inspectItems.length }} 项</span>
-              <button class="btn btn-sm" @click="clearInspectItems" :disabled="inspectItems.length === 0">清空列表</button>
-            </div>
-          </div>
-          <div v-if="inspectPanelOpen" class="inspect-filters">
-            <input v-model="inspectKeywordQuery" class="search-input" placeholder="按关键字搜索查看列表..." />
-            <input v-model="inspectWorldbookQuery" class="search-input" placeholder="按世界书搜索查看列表..." />
-          </div>
-          <div v-if="inspectPanelOpen && filteredInspectItems.length === 0" class="panel-empty inspect-empty">当前没有匹配的查看条目。</div>
-          <div v-else-if="inspectPanelOpen" class="inspect-list">
-            <div v-for="item in filteredInspectItems" :key="`${item.worldbook}:${item.uid}`" class="inspect-card">
-              <div class="inspect-card-top">
-                <div>
-                  <div class="inspect-card-title">{{ item.entry.comment || '（无标题）' }}</div>
-                  <div class="inspect-card-sub">{{ item.worldbook }} · UID {{ item.uid }} · {{ strategyShort(item.entry) }} · {{ positionShort(item.entry) }}</div>
-                </div>
-                <div class="inspect-card-actions">
-                  <button class="btn btn-sm" @click="jumpToInspectItem(item)">编辑</button>
-                  <button class="btn btn-sm" @click="removeInspectItem(item.worldbook, item.uid)">关闭</button>
-                </div>
-              </div>
-              <div class="inspect-card-content">{{ item.entry.content || '（空内容）' }}</div>
-            </div>
-          </div>
-        </div>
       </section>
 
       <div class="mobile-bottom-tabs">
@@ -573,6 +584,7 @@ const selectedUids = reactive(new Set<number>());
 const isDirty = ref(false);
 const showPreview = ref(false);
 const inspectPanelOpen = ref(true);
+const inspectViewMode = ref<"editor" | "inspect">("editor");
 const wbSearchQuery = ref("");
 const wbPoolOpen = ref(false);
 const sortMode = ref("custom");
@@ -671,6 +683,8 @@ interface InspectItem {
 }
 
 const inspectItems = ref<InspectItem[]>([]);
+const collapsedInspectKeys = reactive(new Set<string>());
+const isInspectViewActive = computed(() => inspectViewMode.value === "inspect");
 const filteredInspectItems = computed(() => {
   const keyword = inspectKeywordQuery.value.trim().toLowerCase();
   const worldbook = inspectWorldbookQuery.value.trim().toLowerCase();
@@ -818,6 +832,7 @@ function openEntryEditor(uid: number) {
 function addInspectItem(worldbook: string, entry: RawEntry) {
   const exists = inspectItems.value.some((item) => item.worldbook === worldbook && item.uid === entry.uid);
   if (exists) return false;
+  collapsedInspectKeys.delete(`${worldbook}:${entry.uid}`);
   inspectItems.value.push({
     worldbook,
     uid: entry.uid,
@@ -844,15 +859,28 @@ function previewInspectEntry(entry: RawEntry) {
 
 function removeInspectItem(worldbook: string, uid: number) {
   inspectItems.value = inspectItems.value.filter((item) => !(item.worldbook === worldbook && item.uid === uid));
+  collapsedInspectKeys.delete(`${worldbook}:${uid}`);
 }
 
 function clearInspectItems() {
   inspectItems.value = [];
+  collapsedInspectKeys.clear();
   inspectKeywordQuery.value = "";
   inspectWorldbookQuery.value = "";
 }
 
+function toggleInspectItem(worldbook: string, uid: number) {
+  const key = `${worldbook}:${uid}`;
+  if (collapsedInspectKeys.has(key)) collapsedInspectKeys.delete(key);
+  else collapsedInspectKeys.add(key);
+}
+
+function isInspectItemOpen(worldbook: string, uid: number) {
+  return !collapsedInspectKeys.has(`${worldbook}:${uid}`);
+}
+
 async function jumpToInspectItem(item: InspectItem) {
+  inspectViewMode.value = "editor";
   await selectWorldbook(item.worldbook);
   openEntryEditor(item.uid);
 }
@@ -1415,6 +1443,12 @@ defineExpose({ save });
   border-top: 1px solid var(--border, #334155);
 }
 
+.standalone-inspect-panel {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: none;
+}
+
 .inspect-head-row {
   display: flex;
   align-items: center;
@@ -1465,6 +1499,23 @@ defineExpose({ save });
   font-size: 13px;
   font-weight: 700;
   color: var(--text-secondary, #f8fafc);
+}
+
+.inspect-card-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.inspect-toggle-btn {
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  border: 1px solid var(--border, #334155);
+  background: var(--bg-input, rgba(16, 24, 39, 0.92));
+  color: var(--text, #e8ecf8);
+  padding: 0;
+  line-height: 1;
 }
 
 .inspect-card-sub {
