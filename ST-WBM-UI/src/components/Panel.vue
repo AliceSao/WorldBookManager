@@ -160,6 +160,18 @@
               <button class="btn btn-sm" @click="openReorderUidDialog" :disabled="selectedUids.size === 0 && !filteredEntries.length">UID 重排</button>
               <button class="btn btn-sm" @click="undoHistory" :disabled="!canUndo()">↩ 回退</button>
             </div>
+            <div class="action-group-title">完整批量工具</div>
+            <BatchMenu
+              v-if="selectedWorldbook"
+              :worldbook-name="selectedWorldbook"
+              :selected-uids="Array.from(selectedUids)"
+              @done="onBatchDone"
+              @error="onError"
+              @clear-selection="selectedUids.clear()"
+              @batch-delete="batchDelete"
+              @reorder-uids="reorderUidsByCurrentView"
+              @refresh="loadWorldbook"
+            />
           </div>
         </section>
         </div>
@@ -207,21 +219,43 @@
       </div>
 
       <section v-show="mobileTab === 'worldbooks'" class="mobile-panel">
-        <input v-model="wbSearchQuery" class="search-input" placeholder="搜索世界书..." />
-        <div class="workspace-wb-list mobile-list-gap">
-          <div v-for="wb in filteredWorldbookList" :key="wb" class="workspace-wb-item" :class="{ active: selectedWorldbook === wb }" @click="selectWorldbook(wb)">
-            <strong>{{ selectedWorldbook === wb ? '☑' : '☐' }} {{ wb }}</strong>
-            <div class="meta">点击切换当前工作书</div>
+        <div class="current-worldbook-card" :class="{ empty: !selectedWorldbook }">
+          <div class="current-worldbook-title">当前工作书</div>
+          <div class="current-worldbook-name">{{ selectedWorldbook || '未选择世界书' }}</div>
+          <div v-if="selectedWorldbooks.size" class="current-worldbook-meta">已勾选 {{ selectedWorldbooks.size }} 本</div>
+          <div v-if="selectedWorldbooks.size" class="workspace-chip-row current-worldbook-list">
+            <button
+              v-for="wb in Array.from(selectedWorldbooks).slice(0,2)"
+              :key="wb"
+              class="workspace-chip"
+              :class="{ active: selectedWorldbook === wb }"
+              @click="selectWorldbook(wb)"
+            >{{ wb }}</button>
+            <span v-if="selectedWorldbooks.size > 2" class="workspace-entry-meta">+{{ selectedWorldbooks.size - 2 }}</span>
           </div>
         </div>
-        <div class="workspace-chip-row mobile-list-gap">
+        <button class="workspace-chip selector-toggle" @click="wbPoolOpen = !wbPoolOpen">📚 选择世界书 {{ wbPoolOpen ? '▾' : '▸' }}</button>
+        <div v-show="wbPoolOpen" class="wb-pool-wrap mobile-list-gap">
+          <input v-model="wbSearchQuery" class="search-input" placeholder="搜索世界书..." />
+          <div class="workspace-wb-list wb-pool-list">
+            <div v-for="wb in filteredWorldbookList" :key="wb" class="workspace-wb-item" :class="{ active: selectedWorldbook === wb, checked: selectedWorldbooks.has(wb) }">
+              <div class="workspace-wb-main wb-select-row2">
+                <input type="checkbox" :checked="selectedWorldbooks.has(wb)" @change="toggleWorldbookCheck(wb)" @click.stop />
+                <button class="wb-open-btn" @click.stop="selectWorldbook(wb)">
+                  <strong>{{ selectedWorldbook === wb ? '☑' : '☐' }} {{ wb }}</strong>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="workspace-chip-row mobile-list-gap worldbook-ops-grid">
           <button class="workspace-chip" @click="triggerImport">📥 导入</button>
           <a v-if="selectedWorldbook" :href="exportUrl" :download="`${selectedWorldbook}.json`" class="workspace-chip">📤 导出</a>
           <button class="workspace-chip" @click="duplicateWorldbook" :disabled="!selectedWorldbook">📋 复制世界书</button>
           <button class="workspace-chip" @click="renameWorldbook" :disabled="!selectedWorldbook">✏️ 改名</button>
           <button class="workspace-chip danger" @click="confirmDeleteWorldbook" :disabled="!selectedWorldbook">🗑️ 删除</button>
+          <button class="workspace-chip" @click="openCreateDialog">＋ 新建</button>
         </div>
-          <button class="btn btn-sm" @click="openCreateDialog">＋ 新建世界书</button>
       </section>
 
       <section v-show="mobileTab === 'entries'" class="mobile-panel">
@@ -280,6 +314,19 @@
           <button class="btn btn-sm" @click="openMoveDialog('down')" :disabled="selectedUids.size === 0">⬇ 下移</button>
           <button class="btn btn-sm" @click="openReorderUidDialog" :disabled="selectedUids.size === 0 && !filteredEntries.length">UID 重排</button>
           <button class="btn btn-sm" @click="undoHistory" :disabled="!canUndo()">↩ 回退</button>
+        </div>
+        <div class="mobile-batch-wrap">
+          <BatchMenu
+            v-if="selectedWorldbook"
+            :worldbook-name="selectedWorldbook"
+            :selected-uids="Array.from(selectedUids)"
+            @done="onBatchDone"
+            @error="onError"
+            @clear-selection="selectedUids.clear()"
+            @batch-delete="batchDelete"
+            @reorder-uids="reorderUidsByCurrentView"
+            @refresh="loadWorldbook"
+          />
         </div>
       </section>
 
@@ -406,12 +453,14 @@
 <script setup lang="ts">
 import { ref, computed, reactive, nextTick, onMounted, onUnmounted } from "vue";
 import EntryEditor from "./EntryEditor.vue";
+import BatchMenu from "./BatchMenu.vue";
 import type { RawEntry } from "../utils/worldbook";
 import { cloneEntries, createBlankEntry } from "../utils/worldbook";
 import {
   getWorldbook,
   saveWorldbook,
   addEntries,
+  deleteEntries,
   exportWorldbookUrl,
   syncWorldbookToST,
   createWorldbook,
@@ -1054,6 +1103,29 @@ function positionShort(entry: RawEntry) {
 function openContentEditorFromCurrent() {
   const editor = document.querySelector('.entry-editor .content-expand-btn, .entry-editor .editor-toolbar button') as HTMLButtonElement | null;
   editor?.click();
+}
+
+function onBatchDone(msg: string) {
+  emit("status", msg, "success");
+  loadWorldbook();
+}
+
+function onError(msg: string) {
+  emit("status", msg, "error");
+}
+
+async function batchDelete() {
+  if (!selectedWorldbook.value || selectedUids.size === 0) return;
+  if (!window.confirm(`确定删除已选的 ${selectedUids.size} 条条目吗？`)) return;
+  const res = await deleteEntries(selectedWorldbook.value, Array.from(selectedUids));
+  if (res.success) {
+    selectedUids.clear();
+    await loadWorldbook();
+    markDirty();
+    emit("status", `已删除 ${res.data?.count ?? 0} 条条目`, "success");
+  } else {
+    emit("status", `删除失败：${res.message}`, "error");
+  }
 }
 
 defineExpose({ save });
