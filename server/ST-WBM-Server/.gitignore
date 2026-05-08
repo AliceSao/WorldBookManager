@@ -1,5 +1,26 @@
+# ST-WBM-Server 独立仓 = 运行时后端插件仓
+#
+# 这个仓库只允许保留可直接安装到 SillyTavern 插件目录的运行文件：
+# - README.md
+# - package.json
+# - dist/
+# - web/dist/
+#
+# TypeScript 源码、开发配置、锁文件等不进入本仓库。
+# 完整源码统一维护在主仓库 WorldBookManager/server/ST-WBM-Server/ 下。
+
+# 依赖与系统杂项
 node_modules/
 **/node_modules/
 */node_modules/
 *.log
 .DS_Store
+
+# 开发源码与配置
+src/
+package-lock.json
+pnpm-lock.yaml
+tsconfig.json
+.gitignore
+
+# 说明：dist/ 与 web/dist/ 是运行时必须文件，不要忽略

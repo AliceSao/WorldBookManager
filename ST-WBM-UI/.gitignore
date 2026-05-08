@@ -1,6 +1,29 @@
+# ST-WBM-UI 独立仓 = 运行时前端扩展仓
+#
+# 这个仓库只允许保留可直接安装到 SillyTavern 的运行文件：
+# - README.md
+# - index.js
+# - manifest.json
+# - style.css
+#
+# Vue 源码、构建配置、锁文件、测试文件等一律不进入本仓库。
+# 完整源码统一维护在主仓库 WorldBookManager/ST-WBM-UI/ 下。
+
+# 依赖与系统杂项
 node_modules/
 **/node_modules/
 */node_modules/
-dist/
 *.log
 .DS_Store
+
+# 本地构建与开发产物
+dist/
+src/
+package.json
+package-lock.json
+pnpm-lock.yaml
+tsconfig.json
+tsconfig.node.json
+vite.config.ts
+index.html
+.gitignore
