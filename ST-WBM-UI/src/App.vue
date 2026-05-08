@@ -105,6 +105,7 @@ interface Toast {
 }
 const toasts = ref<Toast[]>([]);
 let toastId = 0;
+let statusTimerId: ReturnType<typeof setTimeout> | null = null;
 
 function showToast(msg: string, type: Toast["type"] = "info", duration = 4000) {
   const icons = { success: "✨", error: "😿", info: "🐾" };
@@ -130,8 +131,16 @@ function setStatus(msg: string, type: "success" | "error" | "info" = "info") {
   statusMessage.value = msg;
   statusClass.value = `status-${type}`;
   showToast(msg, type, type === "error" ? 6000 : 3500);
+  if (statusTimerId) {
+    clearTimeout(statusTimerId);
+    statusTimerId = null;
+  }
   if (type !== "error") {
-    setTimeout(() => { statusMessage.value = ""; statusClass.value = ""; }, 5000);
+    statusTimerId = setTimeout(() => {
+      statusMessage.value = "";
+      statusClass.value = "";
+      statusTimerId = null;
+    }, 5000);
   }
 }
 
@@ -182,5 +191,6 @@ onMounted(() => {
 onUnmounted(() => {
   window.removeEventListener("beforeunload", onBeforeUnload);
   document.removeEventListener("click", onDocClick);
+  if (statusTimerId) clearTimeout(statusTimerId);
 });
 </script>

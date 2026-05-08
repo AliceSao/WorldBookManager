@@ -50,7 +50,7 @@ export function registerWorldbookRoutes(router: Router): void {
   // ────────────────────────────────────────────────────────────────────────
   router.get("/csrf-token", (req: Request, res: Response) => {
     try {
-      const token = typeof (req as unknown as { csrfToken?: () => string }).工作世界书Token === "function"
+      const token = typeof (req as unknown as { csrfToken?: () => string }).csrfToken === "function"
         ? (req as unknown as { csrfToken: () => string }).csrfToken()
         : null;
       res.json({ success: true, token });

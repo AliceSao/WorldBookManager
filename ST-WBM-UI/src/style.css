@@ -186,7 +186,7 @@ body{font-family:"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;backgroun
 .btn:disabled{opacity:.4;cursor:not-allowed;transform:none}.btn-primary{background:var(--accent);border-color:var(--accent);color:var(--mode-text);font-weight:600}.btn-primary:hover:not(:disabled){background:var(--accent-hover);border-color:var(--accent-hover)}.btn-sm{padding:6px 10px;font-size:12px}.btn-icon{padding:4px 6px;border:none;background:transparent;font-size:14px}.btn-icon:hover{background:var(--btn-hover);border-radius:8px}
 
 /* Toasts */
-.wbm-toasts{position:fixed;bottom:56px;right:10px;display:flex;flex-direction:column;gap:6px;z-index:9999;pointer-events:none;max-width:min(360px,calc(100vw - 20px))}.wbm-toast{display:flex;align-items:flex-start;gap:8px;padding:10px 12px;border-radius:10px;font-size:12px;pointer-events:auto;cursor:pointer;border:1px solid var(--border);word-break:break-word;line-height:1.45;box-shadow:var(--shadow)}.wbm-toast.toast-success{background:var(--toast-success-bg);border-color:var(--success);color:var(--success)}.wbm-toast.toast-error{background:var(--toast-error-bg);border-color:var(--danger);color:var(--danger)}.wbm-toast.toast-info{background:var(--toast-info-bg);border-color:var(--accent);color:var(--accent)}.wbm-toast.toast-paused{border-style:dashed;opacity:.95}.toast-icon{flex-shrink:0;font-size:14px;margin-top:1px}.toast-msg{flex:1}.toast-pin-hint{font-size:10px;opacity:.65;white-space:nowrap;align-self:center;flex-shrink:0;margin-left:4px}
+.wbm-toasts{position:fixed;top:12px;right:12px;display:flex;flex-direction:column;gap:6px;z-index:9999;pointer-events:none;max-width:min(360px,calc(100vw - 24px))}.wbm-toast{display:flex;align-items:flex-start;gap:8px;padding:10px 12px;border-radius:10px;font-size:12px;pointer-events:auto;cursor:pointer;border:1px solid var(--border);word-break:break-word;line-height:1.45;box-shadow:var(--shadow)}.wbm-toast.toast-success{background:var(--toast-success-bg);border-color:var(--success);color:var(--success)}.wbm-toast.toast-error{background:var(--toast-error-bg);border-color:var(--danger);color:var(--danger)}.wbm-toast.toast-info{background:var(--toast-info-bg);border-color:var(--accent);color:var(--accent)}.wbm-toast.toast-paused{border-style:dashed;opacity:.95}.toast-icon{flex-shrink:0;font-size:14px;margin-top:1px}.toast-msg{flex:1}.toast-pin-hint{font-size:10px;opacity:.65;white-space:nowrap;align-self:center;flex-shrink:0;margin-left:4px}
 @keyframes toast-in{from{opacity:0;transform:translateX(18px)}to{opacity:1;transform:translateX(0)}}
 
 @media (max-width: 766px){
@@ -196,7 +196,7 @@ body{font-family:"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;backgroun
   .wbm-status{white-space:normal;font-size:10px;padding:4px 8px}
   .content-modal{width:100vw;height:100vh;border-radius:0}
   .smart-dialog,.batch-dialog{max-width:calc(100vw - 16px)}
-  .wbm-toasts{top:auto;bottom:8px;right:8px;left:8px;max-width:none}
+  .wbm-toasts{top:8px;right:8px;left:8px;bottom:auto;max-width:none}
   .mobile-panel{min-width:0;max-width:100vw}
   .workspace-panel,.mobile-workspace{overflow:hidden}
   .workspace-chip-row{max-width:100%}

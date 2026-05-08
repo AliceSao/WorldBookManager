@@ -826,6 +826,7 @@ function toggleSelect(uid: number) {
 
 function openEntryEditor(uid: number) {
   currentEditUid.value = uid;
+  inspectViewMode.value = "editor";
   if (isMobile.value) mobileTab.value = "editor";
 }
 
@@ -860,6 +861,19 @@ function previewInspectEntry(entry: RawEntry) {
 function removeInspectItem(worldbook: string, uid: number) {
   inspectItems.value = inspectItems.value.filter((item) => !(item.worldbook === worldbook && item.uid === uid));
   collapsedInspectKeys.delete(`${worldbook}:${uid}`);
+}
+
+function dropInspectItemsForWorldbook(worldbook: string, reason?: string) {
+  const related = inspectItems.value.filter((item) => item.worldbook === worldbook);
+  if (related.length === 0) return;
+  inspectItems.value = inspectItems.value.filter((item) => item.worldbook !== worldbook);
+  for (const item of related) {
+    collapsedInspectKeys.delete(`${item.worldbook}:${item.uid}`);
+  }
+  if (inspectViewMode.value === "inspect" && filteredInspectItems.value.length === 0) {
+    inspectViewMode.value = "editor";
+  }
+  emit("status", reason || `世界书「${worldbook}」已更新，相关查看项已移除，请重新加入。`, "info");
 }
 
 function clearInspectItems() {
@@ -1255,6 +1269,7 @@ const sseHandler: SseCallback = async (data) => {
   if (!data.name) return;
   if (_skipNextSse.value) { _skipNextSse.value = false; return; }
   if (data.name === selectedWorldbook.value && !isDirty.value) {
+    dropInspectItemsForWorldbook(data.name, `检测到世界书「${data.name}」被外部更新，相关查看项已移除，请重新加入。`);
     await loadWorldbook();
   }
 };
@@ -1333,6 +1348,9 @@ function openContentEditorFromCurrent() {
 
 function onBatchDone(msg: string) {
   emit("status", msg, "success");
+  if (selectedWorldbook.value) {
+    dropInspectItemsForWorldbook(selectedWorldbook.value, `世界书「${selectedWorldbook.value}」已批量更新，相关查看项已移除，请重新加入。`);
+  }
   loadWorldbook();
 }
 
@@ -1345,6 +1363,7 @@ async function batchDelete() {
   if (!window.confirm(`确定删除已选的 ${selectedUids.size} 条条目吗？`)) return;
   const res = await deleteEntries(selectedWorldbook.value, Array.from(selectedUids));
   if (res.success) {
+    dropInspectItemsForWorldbook(selectedWorldbook.value, `世界书「${selectedWorldbook.value}」已删除条目，相关查看项已移除，请重新加入。`);
     selectedUids.clear();
     await loadWorldbook();
     markDirty();
