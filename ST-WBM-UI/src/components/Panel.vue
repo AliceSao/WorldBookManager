@@ -524,8 +524,8 @@
 
     <div v-if="showCopyDialog" class="smart-dialog-overlay" @click.self="showCopyDialog = false">
       <div class="smart-dialog">
-        <h4>📚 复制到目标世界书</h4>
-        <p style="font-size:11px;color:var(--text-muted);margin-bottom:8px">当前工作书最多 2 本。可一次复制到已勾选目标书，或直接复制到另一个工作书。</p>
+        <h4>📚 复制选中条目到目标世界书</h4>
+        <p style="font-size:11px;color:var(--text-muted);margin-bottom:8px">只会复制当前世界书中已选中的条目，不会覆盖目标世界书原有内容。</p>
         <div class="copy-mode-row">
           <label><input type="radio" v-model="copyMode" value="checked" /> 复制到已勾选目标书</label>
           <label><input type="radio" v-model="copyMode" value="other-working" /> 复制到另一个工作书</label>
@@ -555,6 +555,7 @@ import {
   getWorldbook,
   saveWorldbook,
   addEntries,
+  copyEntries,
   deleteEntries,
   exportWorldbookUrl,
   syncWorldbookToST,
@@ -669,7 +670,12 @@ const filteredEntries = computed(() => {
 
 const currentEntry = computed(() => localEntries.value.find((e) => e.uid === currentEditUid.value) || null);
 const allSelected = computed(() => filteredEntries.value.length > 0 && filteredEntries.value.every((e) => selectedUids.has(e.uid)));
-const copyCandidateTargets = computed(() => props.worldbooks.filter((wb) => wb !== selectedWorldbook.value));
+const copyCandidateTargets = computed(() => {
+  if (copyMode.value === "other-working") {
+    return Array.from(selectedWorldbooks).filter((wb) => wb !== selectedWorldbook.value);
+  }
+  return props.worldbooks.filter((wb) => wb !== selectedWorldbook.value);
+});
 const filteredCopyCandidateTargets = computed(() => {
   const q = copyTargetSearch.value.trim().toLowerCase();
   return q ? copyCandidateTargets.value.filter((wb) => wb.toLowerCase().includes(q)) : copyCandidateTargets.value;
@@ -1100,36 +1106,42 @@ function openWorldbookCopyDialog() {
 
 function isCopyTargetDisabled(wb: string) {
   if (copyMode.value === "other-working") {
-    return !selectedWorldbooks.has(wb) || (copyTargetWorldbooks.value.length > 0 && !copyTargetWorldbooks.value.includes(wb));
+    return (copyTargetWorldbooks.value.length > 0 && !copyTargetWorldbooks.value.includes(wb));
   }
   return false;
 }
 
 async function confirmCopyToTargets() {
+  if (!selectedWorldbook.value) {
+    emit("status", "当前没有可复制的源世界书", "error");
+    return;
+  }
+  if (selectedUids.size === 0) {
+    emit("status", "请先选中至少一条要复制的条目", "error");
+    return;
+  }
   if (copyTargetWorldbooks.value.length === 0) {
     emit("status", "请选择至少一个目标世界书", "error");
     return;
   }
   const finalTargets = copyMode.value === "other-working" ? copyTargetWorldbooks.value.slice(0, 1) : copyTargetWorldbooks.value;
-  const sources = Array.from(selectedWorldbooks.size ? selectedWorldbooks : (selectedWorldbook.value ? new Set([selectedWorldbook.value]) : new Set<string>()));
-  if (sources.length === 0) {
-    emit("status", "请先勾选至少一个源世界书", "error");
-    return;
-  }
+  const source = selectedWorldbook.value;
   showCopyDialog.value = false;
   try {
-    for (const src of sources) {
-      const res = await getWorldbook(src);
-      if (!res.success || !res.data) continue;
-      for (const target of finalTargets) {
-        if (target === src) continue;
-        await createWorldbook(target, res.data.entries);
+    let copiedCount = 0;
+    for (const target of finalTargets) {
+      if (target === source) continue;
+      const res = await copyEntries(source, Array.from(selectedUids), target);
+      if (!res.success) {
+        emit("status", `复制到「${target}」失败：${res.message}`, "error");
+        continue;
       }
+      copiedCount += res.data?.count ?? 0;
     }
     emit("refresh-worldbooks");
-    emit("status", `已复制 ${sources.length} 本世界书到 ${finalTargets.length} 个目标`, "success");
+    emit("status", `已将 ${selectedUids.size} 条选中条目复制到 ${finalTargets.length} 个目标世界书`, "success");
   } catch (e) {
-    emit("status", `复制世界书失败：${(e as Error).message}`, "error");
+    emit("status", `复制条目失败：${(e as Error).message}`, "error");
   }
 }
 
