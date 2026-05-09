@@ -24,7 +24,7 @@
   │       ├── web/dist/           ← 编译后的 Web UI（直接可用）
   │       ├── src/                ← TypeScript 源代码
   │       └── package.json
-  └── src/                        ← Python CLI 工具（独立，不受影响）
+  └── tools/python-cli/           ← Python CLI 工具（独立，不受影响）
   ```
 
   ---

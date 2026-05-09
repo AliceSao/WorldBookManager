@@ -3,7 +3,7 @@
 ST-WBM-UI 扩展在 SillyTavern 中注入入口面板，通过 iframe 弹窗打开双面板 Vue UI 管理界面。
 
 > **v1.1.0 变更**：斜杠命令已全部移除，不再依赖 JS-Slash-Runner。命令行批量操作请使用
-> [Python CLI](../Python/README.md)。
+> [Python CLI](../python-cli/README.md)。
 
 ---
 

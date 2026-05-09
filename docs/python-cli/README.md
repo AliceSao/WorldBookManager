@@ -12,7 +12,7 @@ WorldBook Manager Python CLI 是一套命令行工具，用于批量管理 Silly
 
 ```bash
 git clone https://github.com/AliceSao/WorldBookManager.git
-cd WorldBookManager/src
+cd WorldBookManager/tools/python-cli/src
 ```
 
 **依赖**：Python 3.10+，无需安装任何第三方库。
@@ -48,7 +48,7 @@ Content:
 
 ### 步骤一：从 ST 导出世界书
 
-在 SillyTavern 中，进入世界信息 → 选择世界书 → 点击导出。将 `.json` 文件放入 `JSON/` 目录。
+在 SillyTavern 中，进入世界信息 → 选择世界书 → 点击导出。将 `.json` 文件放入 `tools/python-cli/JSON/` 工作区。
 
 ### 步骤二：拆分为 TXT
 

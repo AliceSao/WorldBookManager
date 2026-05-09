@@ -9,7 +9,7 @@
 **目标**：将现有世界书的所有条目统一设为"可选"策略，Order 改为 100，并添加共同关键字。
 
 ```bash
-cd WorldBookManager/src
+cd WorldBookManager/tools/python-cli/src
 
 # 1. 拆分世界书
 python main.py sp "MyWorld.json"

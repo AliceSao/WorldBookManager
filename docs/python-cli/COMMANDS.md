@@ -1,6 +1,6 @@
 # Python CLI — 完整命令参考
 
-所有命令在 `src/` 目录下运行：`python main.py <命令> [参数]`
+所有命令在 `tools/python-cli/src/` 目录下运行：`python main.py <命令> [参数]`
 
 每条命令都有一个短别名，完整名和别名效果相同。
 

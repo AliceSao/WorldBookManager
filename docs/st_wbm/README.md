@@ -11,7 +11,7 @@
 | **ST-WBM-UI**     | `ST-WBM-UI/`                     | SillyTavern 前端扩展：注入入口面板 + iframe 弹窗打开 Vue UI |
 | **ST-WBM-Server** | `server/ST-WBM-Server/`          | Node.js 后端插件：REST API + Web UI 静态服务                |
 | **Web UI**        | `server/ST-WBM-Server/web/dist/` | Vue 3 双面板管理界面（已编译）                              |
-| **Python CLI**    | `src/`                           | 离线批量操作工具（26 条命令），命令行操作请使用此工具       |
+| **Python CLI**    | `tools/python-cli/`              | 离线批量操作工具（26 条命令），命令行操作请使用此工具       |
 
 ---
 
@@ -72,9 +72,9 @@ cp -r ST-WBM-UI <ST数据目录>/extensions/third-party/ST-WBM-UI
 
 ### Python CLI 文档
 
-- [Python CLI 使用指南](../Python/README.md)
-- [Python CLI 完整命令参考](../Python/COMMANDS.md)
-- [Python CLI 工作流教程](../Python/WORKFLOW.md)
+- [Python CLI 使用指南](../python-cli/README.md)
+- [Python CLI 完整命令参考](../python-cli/COMMANDS.md)
+- [Python CLI 工作流教程](../python-cli/WORKFLOW.md)
 
 ---
 

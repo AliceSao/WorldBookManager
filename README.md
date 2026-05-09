@@ -10,7 +10,7 @@
 
 | 组件 | 仓库 | 功能 |
 |---|---|---|
-| **Python CLI** | `src/`（本仓库） | 离线批量操作：拆分、合并、批量编辑世界书 JSON/TXT |
+| **Python CLI** | `tools/python-cli/`（本仓库） | 离线批量操作：拆分、合并、批量编辑世界书 JSON/TXT |
 | **ST-WBM-UI** | [AliceSao/ST-WBM-UI](https://github.com/AliceSao/ST-WBM-UI) | SillyTavern 前端扩展：注入入口面板 + iframe 弹窗打开 Vue UI |
 | **ST-WBM-Server** | [AliceSao/ST-WBM-Server](https://github.com/AliceSao/ST-WBM-Server) | SillyTavern 后端插件：REST API + 双面板 Web UI |
 
@@ -93,7 +93,7 @@ ST 导出 JSON → split 拆分为 TXT → 批量编辑 TXT → merge 合并为 
 
 ```bash
 # 进入工具目录
-cd WorldBookManager/src
+cd WorldBookManager/tools/python-cli/src
 
 # 拆分世界书 JSON 为独立 TXT 文件
 python main.py split "YourWorldBook.json"
@@ -145,18 +145,13 @@ python main.py merge -n "YourWorldBook" -t TXT/YourWorldBook
 
 ```
 WorldBookManager/
-├── src/                    ← Python CLI（离线工具，禁止修改）
-│   ├── main.py             ← 主入口
-│   ├── commands.py         ← 命令定义（26 条）
-│   ├── batch_ops.py        ← 批量操作核心
-│   ├── json_parser.py      ← JSON 解析
-│   ├── json_generator.py   ← JSON 生成
-│   ├── txt_parser.py       ← TXT 解析
-│   ├── txt_generator.py    ← TXT 生成
-│   ├── config_manager.py   ← 配置管理
-│   ├── utils.py            ← 工具函数
-│   ├── JSON/               ← 世界书 JSON 文件（gitignore 排除）
-│   └── TXT/                ← 拆分后的 TXT 文件（gitignore 排除）
+├── tools/
+│   └── python-cli/         ← Python CLI（离线工具）
+│       ├── src/            ← CLI 源码入口（main.py 等）
+│       ├── docs/           ← CLI 专属文档
+│       ├── JSON/           ← 世界书 JSON 工作区（gitignore 排除）
+│       ├── TXT/            ← 拆分后的 TXT 工作区（gitignore 排除）
+│       └── config/         ← CLI 本地配置（gitignore 排除）
 ├── ST-WBM-UI/              ← ST 前端扩展源码
 │   ├── index.js            ← 扩展主文件（注入面板 + iframe 弹窗）
 │   ├── manifest.json
@@ -181,6 +176,8 @@ WorldBookManager/
 | [Web UI 使用指南](docs/st_wbm/WEBUI.md) | 双面板界面操作说明 |
 | [后端 REST API 参考](docs/st_wbm/API.md) | `/api/plugins/wb-manager/` 完整接口文档 |
 | [更新日志](docs/st_wbm/CHANGELOG.md) | 版本变更记录 |
+| [Python CLI 使用指南](docs/python-cli/README.md) | Python CLI 总览与基本工作流 |
+| [Python CLI 命令参考](docs/python-cli/COMMANDS.md) | Python CLI 完整命令说明 |
 
 ---
 

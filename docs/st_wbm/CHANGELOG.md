@@ -44,4 +44,4 @@
 
   ### 未变更
 
-- Python CLI 工具（`src/` 目录）保持 v3.0 原状，不受影响
+- Python CLI 工具已独立收拢到 `tools/python-cli/`，功能与工作流保持不变
